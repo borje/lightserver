@@ -2,21 +2,21 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/cpucycle/astrotime"
+	"log"
 	"net/http"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
-	"log"
-	"encoding/json"
 )
 
 const (
-	OneDay = time.Hour * 24
-	LATITUDE           = 58.410807
-	LONGITUDE          = -15.6213727
+	OneDay    = time.Hour * 24
+	LATITUDE  = 58.410807
+	LONGITUDE = -15.6213727
 	/*turnOnBeforeSunset = -time.Hour*/
 	turnOnBeforeSunset = 0
 	NIGHT_OFF_HOUR     = 22
@@ -26,14 +26,15 @@ const (
 )
 
 type Action int
+
 const (
 	TurnOn Action = iota
 	TurnOff
 )
 
 type LightStatus struct {
-	Id int
-	Name string
+	Id    int
+	Name  string
 	State Action
 }
 
@@ -47,26 +48,26 @@ func (a Action) String() (s string) {
 }
 
 type ScheduledAction struct {
-	action Action
+	action   Action
 	weekdays string
-	time string
+	time     string
 }
 
 type ScheduledEvent struct {
 	action Action
-	time time.Time
+	time   time.Time
 }
 
 func eventsForWeekday(weekday time.Weekday, schedule []ScheduledAction) (events []ScheduledEvent) {
 	return
 }
 
-func nextActionAfter (now time.Time, schedule []ScheduledAction) (a Action, t time.Time) {
+func nextActionAfter(now time.Time, schedule []ScheduledAction) (a Action, t time.Time) {
 	/*scheduleItem := schedule[0]*/
 	/*weekdays := strings.Split(scheduleItem.weekdays,",")*/
 	/*var today []ScheduledEvent*/
 	/*for i := range weekdays {*/
-		/*fmt.Println(weekdays[i])*/
+	/*fmt.Println(weekdays[i])*/
 	/*}*/
 	return
 }
@@ -114,11 +115,11 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	if len(fields) >= 3 {
 		nrReceivers, _ = strconv.ParseInt(fields[3], 0, 32)
 	} else {
-		nrReceivers = 0;
+		nrReceivers = 0
 	}
 	jsonWriter := json.NewEncoder(w)
-	for i:=1 ; i <= int(nrReceivers) ; i++ {
-		t := &LightStatus{ i, "asdf", TurnOff }
+	for i := 1; i <= int(nrReceivers); i++ {
+		t := &LightStatus{i, "asdf", TurnOff}
 		jsonWriter.Encode(t)
 	}
 }
