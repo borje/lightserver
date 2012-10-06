@@ -44,14 +44,15 @@ func TestAll(t *testing.T) {
 
 var testScheduleData = []struct {
 	now       Time
-	schedule  []ScheduledAction
+	schedule  []ScheduleConfigItem
 	expAction Action
 	expTime   Time
 }{
-/*{Time{4, 12}, []ScheduledAction{ ScheduledAction{TurnOn, "1", "18:00"} }, TurnOn, Time{4,18}},*/
+	{Time{1, 12}, []ScheduleConfigItem{ScheduleConfigItem{TurnOn, "1", "18:00"}}, TurnOn, Time{1, 18}},
+	{Time{9, 18}, []ScheduleConfigItem{ScheduleConfigItem{TurnOff, "2", "21:00"}}, TurnOff, Time{9, 21}},
 }
 
-func TestNextActionAfter(t *testing.T) {
+func aTestNextActionAfter(t *testing.T) {
 	for _, v := range testScheduleData {
 		now := ToTime(v.now)
 		a, nextTime := nextActionAfter(now, v.schedule)
@@ -62,12 +63,30 @@ func TestNextActionAfter(t *testing.T) {
 			t.Errorf("Unexpected hour: %d for time: %s", nextTime.Hour(), now)
 		}
 		if nextTime.Day() != v.expTime.Day {
-			t.Errorf("Unexpected day: %d for time: %s", nextTime.Day(), now)
+			t.Errorf("Unexpected day for time: %s", nextTime.Day(), now)
 		}
 	}
 
 }
 
 func TestEventsForWeekday(t *testing.T) {
-	schedule := ScheduledAction{TurnOn, "1", "18:00"}
+	for _, testData := range testScheduleData {
+		schedule := testData.schedule
+		now := ToTime(testData.now)
+		events := eventsForDay(now, schedule)
+		if len(events) != 1 {
+			t.Errorf("Exptected length: %d, received: %d", 1, len(events))
+		}
+		for _, e := range events {
+			if e.action != testData.expAction {
+				t.Errorf("Unexpected action for time: %s. Got %s, expected %s", now, e.action, TurnOn)
+			}
+			if e.time.Hour() != testData.expTime.Hour {
+				t.Errorf("Unexpected hour: %2 for time: %s", e.time.Hour(), now)
+			}
+			if e.time.Day() != testData.expTime.Day {
+				t.Errorf("Unexpected day: %d for time: %s", e.time.Day(), now)
+			}
+		}
+	}
 }

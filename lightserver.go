@@ -47,7 +47,7 @@ func (a Action) String() (s string) {
 	return
 }
 
-type ScheduledAction struct {
+type ScheduleConfigItem struct {
 	action   Action
 	weekdays string
 	time     string
@@ -58,11 +58,27 @@ type ScheduledEvent struct {
 	time   time.Time
 }
 
-func eventsForWeekday(weekday time.Weekday, schedule []ScheduledAction) (events []ScheduledEvent) {
+func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events []ScheduledEvent) {
+	events = make([]ScheduledEvent, 0, 7)
+	weekDayToSelect := now.Weekday()
+	for _, v := range schedule {
+		weekdays := strings.Split(v.weekdays, ",")
+		for _, wdStr := range weekdays {
+			wd, _ := strconv.Atoi(wdStr)
+			if weekDayToSelect == time.Weekday(wd) {
+				timeStr := strings.Split(v.time, ":")
+				hour, _ := strconv.Atoi(timeStr[0])
+				minute, _ := strconv.Atoi(timeStr[1])
+				newPos := len(events)
+				events = events[0 : newPos+1]
+				events[newPos] = ScheduledEvent{v.action, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
+			}
+		}
+	}
 	return
 }
 
-func nextActionAfter(now time.Time, schedule []ScheduledAction) (a Action, t time.Time) {
+func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (a Action, t time.Time) {
 	/*scheduleItem := schedule[0]*/
 	/*weekdays := strings.Split(scheduleItem.weekdays,",")*/
 	/*var today []ScheduledEvent*/
@@ -111,14 +127,14 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	cmd.Start()
 	str, _ := reader.ReadString('\n')
 	fields := strings.Fields(str)
-	var nrReceivers int64
+	var nrReceivers int
 	if len(fields) >= 3 {
-		nrReceivers, _ = strconv.ParseInt(fields[3], 0, 32)
+		nrReceivers, _ = strconv.Atoi(fields[3])
 	} else {
 		nrReceivers = 0
 	}
 	jsonWriter := json.NewEncoder(w)
-	for i := 1; i <= int(nrReceivers); i++ {
+	for i := 1; i <= nrReceivers; i++ {
 		t := &LightStatus{i, "asdf", TurnOff}
 		jsonWriter.Encode(t)
 	}
