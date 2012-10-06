@@ -9,15 +9,18 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"log"
+	"encoding/json"
 )
 
 const (
 	OneDay = time.Hour * 24
 	LATITUDE           = 58.410807
 	LONGITUDE          = -15.6213727
-	turnOnBeforeSunset = -time.Hour
+	/*turnOnBeforeSunset = -time.Hour*/
+	turnOnBeforeSunset = 0
 	NIGHT_OFF_HOUR     = 22
-	NIGHT_OFF_MINUTE   = 0
+	NIGHT_OFF_MINUTE   = 36
 	/*NIGHT_OFF_HOUR     = 22*/
 	/*NIGHT_OFF_MINUTE   = 05*/
 )
@@ -27,6 +30,46 @@ const (
 	TurnOn Action = iota
 	TurnOff
 )
+
+type LightStatus struct {
+	Id int
+	Name string
+	State Action
+}
+
+func (a Action) String() (s string) {
+	if a == TurnOn {
+		s = "ON"
+	} else {
+		s = "OFF"
+	}
+	return
+}
+
+type ScheduledAction struct {
+	action Action
+	weekdays string
+	time string
+}
+
+type ScheduledEvent struct {
+	action Action
+	time time.Time
+}
+
+func eventsForWeekday(weekday time.Weekday, schedule []ScheduledAction) (events []ScheduledEvent) {
+	return
+}
+
+func nextActionAfter (now time.Time, schedule []ScheduledAction) (a Action, t time.Time) {
+	/*scheduleItem := schedule[0]*/
+	/*weekdays := strings.Split(scheduleItem.weekdays,",")*/
+	/*var today []ScheduledEvent*/
+	/*for i := range weekdays {*/
+		/*fmt.Println(weekdays[i])*/
+	/*}*/
+	return
+}
 
 func nextActionTime(now time.Time) (a Action, t time.Time) {
 	nightOnTime := astrotime.CalcSunset(now, LATITUDE, LONGITUDE).Add(turnOnBeforeSunset)
@@ -39,9 +82,25 @@ func nextActionTime(now time.Time) (a Action, t time.Time) {
 		t = nightOffTime
 	} else {
 		a = TurnOn
-		t = nightOffTime.Add(OneDay)
+		t = nightOnTime.Add(OneDay)
 	}
 	return
+}
+
+func doTellstickAction(action Action) {
+	var tellstickCmd string
+	if action == TurnOn {
+		tellstickCmd = "--on"
+	} else {
+		tellstickCmd = "--off"
+	}
+	cmd := exec.Command("tdtool", tellstickCmd, "2")
+	b, err := cmd.CombinedOutput()
+	log.Println("Turning device:", action)
+	if err != nil {
+		log.Fatal("Error executing Tellstick action: ", cmd)
+	}
+	log.Printf("%s", b)
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -50,32 +109,53 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	reader := bufio.NewReader(stdout)
 	cmd.Start()
 	str, _ := reader.ReadString('\n')
-	nrReceivers := strings.Split(str, ":")[1]
-	nRcv, _ := strconv.ParseInt(nrReceivers, 0, 32)
-	fmt.Print(nRcv)
-	fmt.Fprintf(w, "status: %s\n", str)
-	fmt.Fprintf(w, "Receivers: '%s'\n", nrReceivers)
-	fmt.Fprintf(w, "Receivers: %d\n", nRcv)
+	fields := strings.Fields(str)
+	var nrReceivers int64
+	if len(fields) >= 3 {
+		nrReceivers, _ = strconv.ParseInt(fields[3], 0, 32)
+	} else {
+		nrReceivers = 0;
+	}
+	jsonWriter := json.NewEncoder(w)
+	for i:=1 ; i <= int(nrReceivers) ; i++ {
+		t := &LightStatus{ i, "asdf", TurnOff }
+		jsonWriter.Encode(t)
+	}
+}
+
+func schedule(quit chan bool) {
+	log.Println("Scheduling started")
+	for {
+		now := time.Now()
+		action, nextTime := nextActionTime(now)
+		log.Printf("Next event: %s @ %s", action, nextTime)
+		untilNextAction := nextTime.Sub(now)
+		timer := time.NewTimer(untilNextAction)
+		select {
+		case <-quit:
+			log.Println("Quit scheduling")
+			return
+		case <-timer.C:
+			log.Println("Executing action: ", action)
+			doTellstickAction(action)
+		}
+	}
 }
 
 func main() {
 	now := time.Now()
-	nightOnTime := astrotime.CalcSunset(now, LATITUDE, LONGITUDE).Add(turnOnBeforeSunset)
-	nightOffTime := time.Date(now.Year(), now.Month(), now.Day(), NIGHT_OFF_HOUR, NIGHT_OFF_MINUTE, 0, 0, now.Location())
 	action, nextTime := nextActionTime(now)
 	fmt.Println(action, nextTime)
-	/*var timer *time.Timer*/
-	if nightOnTime.Before(now) && now.Before(nightOffTime) {
-		fmt.Println("TÄND")
-		fmt.Printf("Kommer att släcka kl. %2d:%02d\n", nextTime.Hour(), nextTime.Minute())
-		/*dur := nightOffTime.Sub(time.Now())*/
-		/*timer = time.NewTimer(dur)*/
+	if action == TurnOff {
+		go doTellstickAction(TurnOn)
 	} else {
-		fmt.Println("SLÄCK")
-		fmt.Printf("Kommer att tända kl. %2d:%02d\n", nextTime.Hour(), nextTime.Minute())
+		go doTellstickAction(TurnOff)
 	}
-	/*<-timer.C*/
-	return
+	quit := make(chan bool)
+	go schedule(quit)
+	time.Sleep(time.Second)
+	//quit <- true
+	time.Sleep(time.Second)
 	http.HandleFunc("/status", statusHandler)
 	http.ListenAndServe(":8081", nil)
 }
