@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sort"
 )
 
 const (
@@ -58,8 +59,14 @@ type ScheduledEvent struct {
 	time   time.Time
 }
 
-func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events []ScheduledEvent) {
-	events = make([]ScheduledEvent, 0, 7)
+type ScheduledEvents []ScheduledEvent
+
+func (se ScheduledEvents) Len() int { return len(se) }
+func (se ScheduledEvents) Swap(i,j int) { se[i], se[j] = se[j], se[i] }
+func (se ScheduledEvents) Less(i, j int) bool { return se[i].time.Before(se[j].time)}
+
+func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events ScheduledEvents) {
+	events = make(ScheduledEvents, 0, 7)
 	weekDayToSelect := now.Weekday()
 	for _, v := range schedule {
 		weekdays := strings.Split(v.weekdays, ",")
@@ -75,6 +82,7 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events []Schedu
 			}
 		}
 	}
+	sort.Sort(events)
 	return
 }
 

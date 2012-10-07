@@ -64,6 +64,15 @@ var testScheduleData = []struct {
 			{TurnOff, Time{9, 21}},
 			{TurnOn, Time{9, 22}},
 		}},
+	{Time{9, 18},
+		[]ScheduleConfigItem{
+			{TurnOn,  "2", "22:00"},
+			{TurnOff, "2", "21:00"},
+		},
+		[]AT{
+			{TurnOff, Time{9, 21}},
+			{TurnOn, Time{9, 22}},
+		}},
 }
 
 func aTestNextActionAfter(t *testing.T) {
