@@ -16,30 +16,8 @@ type lsTest struct {
 	expectedTime Time
 }
 
-var testData = []lsTest{
-	{Time{4, 12}, TurnOn, Time{4, 18}},
-	{Time{4, 19}, TurnOff, Time{4, 22}},
-	{Time{4, 23}, TurnOn, Time{5, 18}},
-}
-
 func ToTime(t Time) time.Time {
 	return time.Date(2012, 10, t.Day, t.Hour, 0, 0, 0, time.Local)
-}
-
-func TestAll(t *testing.T) {
-	for _, v := range testData {
-		now := ToTime(v.now)
-		a, nextTime := nextActionTime(now)
-		if a != v.action {
-			t.Errorf("Unexpected action for time: %s", now)
-		}
-		if nextTime.Hour() != v.expectedTime.Hour {
-			t.Errorf("Unexpected hour: %d for time: %s", nextTime.Hour(), now)
-		}
-		if nextTime.Day() != v.expectedTime.Day {
-			t.Errorf("Unexpected day: %d for time: %s", nextTime.Day(), now)
-		}
-	}
 }
 
 type AT struct {
@@ -98,6 +76,12 @@ var testData2 = []struct {
 			{TurnOn, "1,2", "17:00"}},
 		TurnOn,
 		Time{9, 17}},
+	{Time{9, 3},
+		[]ScheduleConfigItem{
+			{TurnOn, "2", "SUNSET"},
+			{TurnOn, "2", "SUNRISE"}},
+		TurnOn,
+		Time{9, 7}},
 }
 
 func TestNextActionAfter(t *testing.T) {

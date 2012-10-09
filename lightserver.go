@@ -15,15 +15,12 @@ import (
 )
 
 const (
-	OneDay    = time.Hour * 24
-	LATITUDE  = 58.410807
-	LONGITUDE = -15.6213727
-	/*turnOnBeforeSunset = -time.Hour*/
+	OneDay             = time.Hour * 24
+	LATITUDE           = 58.410807
+	LONGITUDE          = -15.6213727
 	turnOnBeforeSunset = 0
 	NIGHT_OFF_HOUR     = 22
 	NIGHT_OFF_MINUTE   = 36
-	/*NIGHT_OFF_HOUR     = 22*/
-	/*NIGHT_OFF_MINUTE   = 05*/
 )
 
 type Action int
@@ -39,13 +36,13 @@ type LightStatus struct {
 	State Action
 }
 
-func (a Action) String() (s string) {
+func (a Action) String() string {
 	if a == TurnOn {
-		s = "ON"
+		return "ON"
 	} else {
-		s = "OFF"
+		return "OFF"
 	}
-	return
+	return ""
 }
 
 type ScheduleConfigItem struct {
@@ -73,9 +70,21 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 		for _, wdStr := range weekdays {
 			wd, _ := strconv.Atoi(wdStr)
 			if weekDayToSelect == time.Weekday(wd) {
-				timeStr := strings.Split(v.time, ":")
-				hour, _ := strconv.Atoi(timeStr[0])
-				minute, _ := strconv.Atoi(timeStr[1])
+				var hour int
+				var minute int
+				if v.time == "SUNSET" {
+					sunset := astrotime.CalcSunset(now, LATITUDE, LONGITUDE)
+					hour = sunset.Hour()
+					minute = sunset.Minute()
+				} else if v.time == "SUNRISE" {
+					sunset := astrotime.CalcSunrise(now, LATITUDE, LONGITUDE)
+					hour = sunset.Hour()
+					minute = sunset.Minute()
+				} else if v.time[2] == ':' {
+					timeStr := strings.Split(v.time, ":")
+					hour, _ = strconv.Atoi(timeStr[0])
+					minute, _ = strconv.Atoi(timeStr[1])
+				}
 				newPos := len(events)
 				events = events[0 : newPos+1]
 				events[newPos] = ScheduledEvent{v.action, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
@@ -98,22 +107,6 @@ func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (Action, time
 	}
 	log.Fatal("Should not return here")
 	return TurnOn, now
-}
-
-func nextActionTime(now time.Time) (a Action, t time.Time) {
-	nightOnTime := astrotime.CalcSunset(now, LATITUDE, LONGITUDE).Add(turnOnBeforeSunset)
-	nightOffTime := time.Date(now.Year(), now.Month(), now.Day(), NIGHT_OFF_HOUR, NIGHT_OFF_MINUTE, 0, 0, now.Location())
-	if now.Before(nightOnTime) {
-		a = TurnOn
-		t = nightOnTime
-	} else if now.Before(nightOffTime) {
-		a = TurnOff
-		t = nightOffTime
-	} else {
-		a = TurnOn
-		t = nightOnTime.Add(OneDay)
-	}
-	return
 }
 
 func doTellstickAction(action Action) {
@@ -152,11 +145,11 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func schedule(quit chan bool) {
+func schedule(configuration []ScheduleConfigItem, quit chan bool) {
 	log.Println("Scheduling started")
 	for {
 		now := time.Now()
-		action, nextTime := nextActionTime(now)
+		action, nextTime := nextActionAfter(now, configuration)
 		log.Printf("Next event: %s @ %s", action, nextTime)
 		untilNextAction := nextTime.Sub(now)
 		timer := time.NewTimer(untilNextAction)
@@ -172,8 +165,13 @@ func schedule(quit chan bool) {
 }
 
 func main() {
+	configuration := []ScheduleConfigItem{
+		{TurnOn, "1,2,3,4,5,6,0", "SUNSET"},
+		{TurnOff, "1,2,3,4,5", "22:15"},
+		{TurnOff, "6,0", "23:00"},
+	}
 	now := time.Now()
-	action, nextTime := nextActionTime(now)
+	action, nextTime := nextActionAfter(now, configuration)
 	fmt.Println(action, nextTime)
 	if action == TurnOff {
 		go doTellstickAction(TurnOn)
@@ -181,7 +179,7 @@ func main() {
 		go doTellstickAction(TurnOff)
 	}
 	quit := make(chan bool)
-	go schedule(quit)
+	go schedule(configuration, quit)
 	time.Sleep(time.Second)
 	//quit <- true
 	time.Sleep(time.Second)
