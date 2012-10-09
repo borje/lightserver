@@ -58,7 +58,7 @@ var testScheduleData = []struct {
 	{Time{9, 18},
 		[]ScheduleConfigItem{
 			{TurnOff, "2", "21:00"},
-			{TurnOn,  "2", "22:00"},
+			{TurnOn, "2", "22:00"},
 		},
 		[]AT{
 			{TurnOff, Time{9, 21}},
@@ -66,7 +66,7 @@ var testScheduleData = []struct {
 		}},
 	{Time{9, 18},
 		[]ScheduleConfigItem{
-			{TurnOn,  "2", "22:00"},
+			{TurnOn, "2", "22:00"},
 			{TurnOff, "2", "21:00"},
 		},
 		[]AT{
@@ -75,19 +75,45 @@ var testScheduleData = []struct {
 		}},
 }
 
-func aTestNextActionAfter(t *testing.T) {
-	for _, v := range testScheduleData {
+var testData2 = []struct {
+	now            Time
+	config         []ScheduleConfigItem
+	expectedAction Action
+	expectedTime   Time
+}{
+	{Time{8, 15},
+		[]ScheduleConfigItem{
+			{TurnOn, "1", "18:00"}},
+		TurnOn,
+		Time{8, 18}},
+	{Time{8, 19},
+		[]ScheduleConfigItem{
+			{TurnOn, "1", "18:00"},
+			{TurnOn, "1", "20:00"}},
+		TurnOn,
+		Time{8, 20}},
+	{Time{8, 21},
+		[]ScheduleConfigItem{
+			{TurnOn, "1", "20:00"},
+			{TurnOn, "1,2", "17:00"}},
+		TurnOn,
+		Time{9, 17}},
+}
+
+func TestNextActionAfter(t *testing.T) {
+	for _, v := range testData2 {
 		now := ToTime(v.now)
-		a, nextTime := nextActionAfter(now, v.schedule)
-		if a != v.expected[0].action {
+		action, nextTime := nextActionAfter(now, v.config)
+		if action != v.expectedAction {
 			t.Errorf("Unexpected action for time: %s", v.now)
 		}
-		if nextTime.Hour() != v.expected[0].time.Hour {
+		if nextTime.Hour() != v.expectedTime.Hour {
 			t.Errorf("Unexpected hour: %d for time: %s", nextTime.Hour(), now)
 		}
-		if nextTime.Day() != v.expected[0].time.Day {
-			t.Errorf("Unexpected day for time: %s", nextTime.Day(), now)
+		if nextTime.Day() != v.expectedTime.Day {
+			t.Errorf("Unexpected day: %d for time: %s", nextTime.Day(), now)
 		}
+
 	}
 }
 

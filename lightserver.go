@@ -8,10 +8,10 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
-	"sort"
 )
 
 const (
@@ -61,9 +61,9 @@ type ScheduledEvent struct {
 
 type ScheduledEvents []ScheduledEvent
 
-func (se ScheduledEvents) Len() int { return len(se) }
-func (se ScheduledEvents) Swap(i,j int) { se[i], se[j] = se[j], se[i] }
-func (se ScheduledEvents) Less(i, j int) bool { return se[i].time.Before(se[j].time)}
+func (se ScheduledEvents) Len() int           { return len(se) }
+func (se ScheduledEvents) Swap(i, j int)      { se[i], se[j] = se[j], se[i] }
+func (se ScheduledEvents) Less(i, j int) bool { return se[i].time.Before(se[j].time) }
 
 func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events ScheduledEvents) {
 	events = make(ScheduledEvents, 0, 7)
@@ -86,14 +86,18 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 	return
 }
 
-func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (a Action, t time.Time) {
-	/*scheduleItem := schedule[0]*/
-	/*weekdays := strings.Split(scheduleItem.weekdays,",")*/
-	/*var today []ScheduledEvent*/
-	/*for i := range weekdays {*/
-	/*fmt.Println(weekdays[i])*/
-	/*}*/
-	return
+func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (Action, time.Time) {
+	for {
+		for _, event := range eventsForDay(now, schedule) {
+			if event.time.After(now) {
+				return event.action, event.time
+			}
+		}
+		nextDay := now.Add(OneDay)
+		now = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location())
+	}
+	log.Fatal("Should not return here")
+	return TurnOn, now
 }
 
 func nextActionTime(now time.Time) (a Action, t time.Time) {
