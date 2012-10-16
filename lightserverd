@@ -1,0 +1,23 @@
+#!/bin/sh
+
+. /lib/lsb/init-functions
+#DAEMON=/home/pi/lightserver
+DAEMON=$GOPATH/src/lightserver/lightserver
+
+
+case "$1" in
+    start)
+        log_daemon_msg "Starting lightserverd"
+        start-stop-daemon --start --background --exec $DAEMON
+        ;;
+    stop)
+        log_action_msg "Stopping lightserverd"
+        start-stop-daemon --stop --exec $DAEMON
+        ;;
+    status)
+        status_of_proc $DAEMON
+        ;;
+    *)
+        log_warning_msg "usage:"
+esac
+

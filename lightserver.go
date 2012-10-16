@@ -3,10 +3,10 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"github.com/cpucycle/astrotime"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -18,9 +18,7 @@ const (
 	OneDay             = time.Hour * 24
 	LATITUDE           = 58.410807
 	LONGITUDE          = -15.6213727
-	turnOnBeforeSunset = 0
-	NIGHT_OFF_HOUR     = 22
-	NIGHT_OFF_MINUTE   = 36
+	LOG_FILE           = "lightserver.log"
 )
 
 type Action int
@@ -167,12 +165,17 @@ func schedule(configuration []ScheduleConfigItem, quit chan bool) {
 func main() {
 	configuration := []ScheduleConfigItem{
 		{TurnOn, "1,2,3,4,5,6,0", "SUNSET"},
-		{TurnOff, "1,2,3,4,5", "22:15"},
-		{TurnOff, "6,0", "23:00"},
+		{TurnOff, "0,1,2,3,4", "22:15"},
+		{TurnOff, "5,6", "23:00"},
+		{TurnOn, "1,2,3,4,5", "06:45"},
+		{TurnOff, "1,2,3,4,5", "SUNRISE"},
+	}
+	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE|os.O_WRONLY, 0666)
+	if err == nil {
+		log.SetOutput(logfile)
 	}
 	now := time.Now()
-	action, nextTime := nextActionAfter(now, configuration)
-	fmt.Println(action, nextTime)
+	action, _ := nextActionAfter(now, configuration)
 	if action == TurnOff {
 		go doTellstickAction(TurnOn)
 	} else {
