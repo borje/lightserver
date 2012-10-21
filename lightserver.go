@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -118,7 +120,8 @@ func doTellstickAction(action Action) {
 	b, err := cmd.CombinedOutput()
 	log.Println("Turning device:", action)
 	if err != nil {
-		log.Fatal("Error executing Tellstick action: ", cmd)
+		log.Println("Error executing Tellstick action: ", cmd)
+		// Some kind error handling
 	}
 	log.Printf("%s", b)
 }
@@ -144,7 +147,6 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func schedule(configuration []ScheduleConfigItem, quit chan bool) {
-	log.Println("Scheduling started")
 	for {
 		now := time.Now()
 		action, nextTime := nextActionAfter(now, configuration)
@@ -162,6 +164,14 @@ func schedule(configuration []ScheduleConfigItem, quit chan bool) {
 	}
 }
 
+func signalHandler(quit chan bool) {
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+	sig := <-signalChannel
+	quit <- true
+	log.Println("Received signal: ", sig)
+}
+
 func main() {
 	configuration := []ScheduleConfigItem{
 		{TurnOn, "1,2,3,4,5,6,0", "SUNSET"},
@@ -170,10 +180,15 @@ func main() {
 		{TurnOn, "1,2,3,4,5", "06:45"},
 		{TurnOff, "1,2,3,4,5", "SUNRISE"},
 	}
-	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE|os.O_WRONLY, 0666)
+	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
 	if err == nil {
 		log.SetOutput(logfile)
+		defer func () {
+			log.Println("Exiting")
+			logfile.Close()
+		} ()
 	}
+	log.Println("Starting")
 	now := time.Now()
 	action, _ := nextActionAfter(now, configuration)
 	if action == TurnOff {
@@ -183,9 +198,8 @@ func main() {
 	}
 	quit := make(chan bool)
 	go schedule(configuration, quit)
-	time.Sleep(time.Second)
-	//quit <- true
-	time.Sleep(time.Second)
 	http.HandleFunc("/status", statusHandler)
-	http.ListenAndServe(":8081", nil)
+	go http.ListenAndServe(":8081", nil)
+	signalHandler(quit)
+	/*time.Sleep(time.Second / 2)*/
 }
