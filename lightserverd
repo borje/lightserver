@@ -3,12 +3,13 @@
 . /lib/lsb/init-functions
 #DAEMON=/home/pi/lightserver
 DAEMON=$GOPATH/src/lightserver/lightserver
+CWD=`dirname $DAEMON`
 
 
 case "$1" in
     start)
         log_daemon_msg "Starting lightserverd"
-        start-stop-daemon --start --background --exec $DAEMON
+        start-stop-daemon --chdir $CWD --start --background --exec $DAEMON
         ;;
     stop)
         log_action_msg "Stopping lightserverd"
@@ -17,7 +18,11 @@ case "$1" in
     status)
         status_of_proc $DAEMON
         ;;
+    restart)
+        $0 stop
+        $0 start
+        ;;
     *)
-        log_warning_msg "usage:"
+        log_warning_msg "usage: $0 {start|stop|restart|status}"
 esac
 
