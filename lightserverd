@@ -1,28 +1,56 @@
-#!/bin/sh
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          lightserverd
+# Should-Start:      
+# Required-Start:    $local_fs $remote_fs telldusd
+# Required-Stop:     $local_fs $remote_fs telldusd
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: LightServer
+# Description:       Debian init script for the LightServer
+### END INIT INFO
+#
+# Author:       Börje Granberg
+#
+set -e
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/bin
+DAEMON=/home/pi/lightserver
+
+test -x $DAEMON || exit 0
+
+if [ -r /etc/default/locale ]; then
+  . /etc/default/locale
+  export LANG LANGUAGE
+fi
 
 . /lib/lsb/init-functions
-#DAEMON=/home/pi/lightserver
-DAEMON=$GOPATH/src/lightserver/lightserver
-CWD=`dirname $DAEMON`
-
 
 case "$1" in
-    start)
-        log_daemon_msg "Starting lightserverd"
-        start-stop-daemon --chdir $CWD --start --background --exec $DAEMON
-        ;;
-    stop)
-        log_action_msg "Stopping lightserverd"
-        start-stop-daemon --stop --exec $DAEMON
-        ;;
-    status)
-        status_of_proc $DAEMON
-        ;;
-    restart)
+  start)
+        log_daemon_msg "Starting LightServer" "lightserver"
+        start-stop-daemon --start --quiet --pidfile /var/run/lightserver.pid --name lightserver --exec $DAEMON -b -m  -c pi -d $(dirname $DAEMON)|| echo -n " already running"
+        log_end_msg $?
+  ;;
+  stop)
+        log_daemon_msg "Stopping LightServer" "lightserver"
+        set +e
+        start-stop-daemon --stop --quiet --pidfile /var/run/lightserver.pid \
+                --name lightserver --retry 5
+        set -e
+        log_end_msg $?
+  ;;
+  status)
+        status_of_proc -p "$PIDFILE" "$DAEMON" lightserver && exit 0 || exit $?
+  ;;
+  restart)
         $0 stop
         $0 start
-        ;;
-    *)
-        log_warning_msg "usage: $0 {start|stop|restart|status}"
+  ;;
+  *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+  ;;
 esac
 
+exit 0

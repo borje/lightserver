@@ -1,0 +1,4 @@
+INSTALL:
+create symlink to lightserverd in /etc/init.d
+
+sudo update-rc.d lightserverd defaults
