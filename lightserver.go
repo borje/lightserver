@@ -126,6 +126,10 @@ func doTellstickAction(action Action) {
 	log.Printf("%s", b)
 }
 
+/*
+  Web interface
+*/
+
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("tdtool", "--list")
 	stdout, _ := cmd.StdoutPipe()
@@ -201,5 +205,4 @@ func main() {
 	http.HandleFunc("/status", statusHandler)
 	go http.ListenAndServe(":8081", nil)
 	signalHandler(quit)
-	/*time.Sleep(time.Second / 2)*/
 }

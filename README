@@ -2,3 +2,11 @@ INSTALL:
 create symlink to lightserverd in /etc/init.d
 
 sudo update-rc.d lightserverd defaults
+
+TODO:
+Redesign the configuration since the present does not support to skip a "turn on"
+period if TurnOn happens after TurnOff
+
+Proposal:
+OFF: 0645
+ON:  SUNRISE

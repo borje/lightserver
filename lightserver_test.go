@@ -82,6 +82,13 @@ var testData2 = []struct {
 			{TurnOn, "2", "SUNRISE"}},
 		TurnOn,
 		Time{9, 7}},
+	{Time{9, 3},
+		[]ScheduleConfigItem{
+			{TurnOn, "2", "07:30"},
+			{TurnOff, "2", "SUNRISE"},
+			{TurnOn, "2", "17:00"}},
+		TurnOn,
+		Time{9, 17}},
 }
 
 func TestNextActionAfter(t *testing.T) {
