@@ -46,12 +46,14 @@ func (a Action) String() string {
 }
 
 type ScheduleConfigItem struct {
+	device   int
 	action   Action
 	weekdays string
 	time     string
 }
 
 type ScheduledEvent struct {
+	device int
 	action Action
 	time   time.Time
 }
@@ -87,7 +89,7 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 				}
 				newPos := len(events)
 				events = events[0 : newPos+1]
-				events[newPos] = ScheduledEvent{v.action, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
+				events[newPos] = ScheduledEvent{v.device, v.action, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
 			}
 		}
 	}
@@ -154,7 +156,7 @@ func schedule(configuration []ScheduleConfigItem, quit chan bool) {
 	for {
 		now := time.Now()
 		action, nextTime := nextActionAfter(now, configuration)
-		log.Printf("Next event: %s @ %s", action, nextTime)
+		log.Printf("Next event: %s @ %s (device %d)", action, nextTime)
 		untilNextAction := nextTime.Sub(now)
 		timer := time.NewTimer(untilNextAction)
 		select {
@@ -178,11 +180,11 @@ func signalHandler(quit chan bool) {
 
 func main() {
 	configuration := []ScheduleConfigItem{
-		{TurnOn, "1,2,3,4,5,6,0", "SUNSET"},
-		{TurnOff, "0,1,2,3,4", "22:15"},
-		{TurnOff, "5,6", "23:00"},
-		{TurnOn, "1,2,3,4,5", "06:45"},
-		{TurnOff, "1,2,3,4,5", "SUNRISE"},
+		{2, TurnOn, "1,2,3,4,5,6,0", "15:00"},
+		{2, TurnOff, "0,1,2,3,4", "22:15"},
+		{2, TurnOff, "5,6", "23:00"},
+		{2, TurnOn, "1,2,3,4,5", "07:15"},
+		{2, TurnOff, "1,2,3,4,5", "09:00"},
 	}
 	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
 	if err == nil {
