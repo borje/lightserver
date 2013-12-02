@@ -1,10 +1,11 @@
 package main
 
 import (
-	"bufio"
-	"encoding/json"
-	"github.com/cpucycle/astrotime"
+	/*"bufio"*/
+	/*"encoding/json"*/
+	/*"github.com/cpucycle/astrotime"*/
 	"log"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -47,9 +48,9 @@ func (a Action) String() string {
 
 type ScheduleConfigItem struct {
 	device   int
-	action   Action
 	weekdays string
-	time     string
+	timeFrom string
+	timeTo	 string
 }
 
 type ScheduledEvent struct {
@@ -64,8 +65,15 @@ func (se ScheduledEvents) Len() int           { return len(se) }
 func (se ScheduledEvents) Swap(i, j int)      { se[i], se[j] = se[j], se[i] }
 func (se ScheduledEvents) Less(i, j int) bool { return se[i].time.Before(se[j].time) }
 
+func timeFromString(now time.Time, clock string) (time.Time) {
+	timeStr := strings.Split(clock, ":")
+	hour, _ := strconv.Atoi(timeStr[0])
+	minute, _ := strconv.Atoi(timeStr[1])
+	return time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())
+}
+
 func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events ScheduledEvents) {
-	events = make(ScheduledEvents, 0, 7)
+	events = make(ScheduledEvents, 0, 8)
 	weekDayToSelect := now.Weekday()
 	for _, v := range schedule {
 		weekdays := strings.Split(v.weekdays, ",")
@@ -74,22 +82,35 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 			if weekDayToSelect == time.Weekday(wd) {
 				var hour int
 				var minute int
-				if v.time == "SUNSET" {
-					sunset := astrotime.CalcSunset(now, LATITUDE, LONGITUDE)
-					hour = sunset.Hour()
-					minute = sunset.Minute()
-				} else if v.time == "SUNRISE" {
-					sunset := astrotime.CalcSunrise(now, LATITUDE, LONGITUDE)
-					hour = sunset.Hour()
-					minute = sunset.Minute()
-				} else if v.time[2] == ':' {
-					timeStr := strings.Split(v.time, ":")
+				/*if v.timeFrom == "SUNSET" {*/
+					/*sunset := astrotime.CalcSunset(now, LATITUDE, LONGITUDE)*/
+					/*hour = sunset.Hour()*/
+					/*minute = sunset.Minute()*/
+				/*} else if v.time == "SUNRISE" {*/
+					/*sunset := astrotime.CalcSunrise(now, LATITUDE, LONGITUDE)*/
+					/*hour = sunset.Hour()*/
+					/*minute = sunset.Minute()*/
+				/*} else if v.time[2] == ':' {*/
+
+				// TURN ON
+				if v.timeFrom[2] == ':'{
+					timeStr := strings.Split(v.timeFrom, ":")
 					hour, _ = strconv.Atoi(timeStr[0])
 					minute, _ = strconv.Atoi(timeStr[1])
 				}
 				newPos := len(events)
 				events = events[0 : newPos+1]
-				events[newPos] = ScheduledEvent{v.device, v.action, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
+				events[newPos] = ScheduledEvent{v.device, TurnOn, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
+
+				// TURN OFF
+				if v.timeTo[2] == ':'{
+					timeStr := strings.Split(v.timeTo, ":")
+					hour, _ = strconv.Atoi(timeStr[0])
+					minute, _ = strconv.Atoi(timeStr[1])
+				}
+				newPos = len(events)
+				events = events[0 : newPos+1]
+				events[newPos] = ScheduledEvent{v.device, TurnOff, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
 			}
 		}
 	}
@@ -97,18 +118,18 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 	return
 }
 
-func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (Action, time.Time) {
+func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (int, Action, time.Time) {
 	for {
 		for _, event := range eventsForDay(now, schedule) {
 			if event.time.After(now) {
-				return event.action, event.time
+				return event.device, event.action, event.time
 			}
 		}
 		nextDay := now.Add(OneDay)
 		now = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location())
 	}
 	log.Fatal("Should not return here")
-	return TurnOn, now
+	return 0, TurnOn, now
 }
 
 func doTellstickAction(action Action) {
@@ -118,7 +139,8 @@ func doTellstickAction(action Action) {
 	} else {
 		tellstickCmd = "--off"
 	}
-	cmd := exec.Command("tdtool", tellstickCmd, "2")
+	/*cmd := exec.Command("tdtool", tellstickCmd, "2")*/
+	cmd := exec.Command("echo", tellstickCmd, "2")
 	b, err := cmd.CombinedOutput()
 	log.Println("Turning device:", action)
 	if err != nil {
@@ -133,29 +155,18 @@ func doTellstickAction(action Action) {
 */
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
-	cmd := exec.Command("tdtool", "--list")
-	stdout, _ := cmd.StdoutPipe()
-	reader := bufio.NewReader(stdout)
-	cmd.Start()
-	str, _ := reader.ReadString('\n')
-	fields := strings.Fields(str)
-	var nrReceivers int
-	if len(fields) >= 3 {
-		nrReceivers, _ = strconv.Atoi(fields[3])
-	} else {
-		nrReceivers = 0
-	}
-	jsonWriter := json.NewEncoder(w)
-	for i := 1; i <= nrReceivers; i++ {
-		t := &LightStatus{i, "asdf", TurnOff}
-		jsonWriter.Encode(t)
+	now := time.Now()
+	for i := 0; i < 4 * 7; i++ {
+		device, action, next := nextActionAfter(now, GetConfiguration())
+		fmt.Println(device, next, action)
+		now = next
 	}
 }
 
 func schedule(configuration []ScheduleConfigItem, quit chan bool) {
 	for {
 		now := time.Now()
-		action, nextTime := nextActionAfter(now, configuration)
+		_, action, nextTime := nextActionAfter(now, configuration)
 		log.Printf("Next event: %s @ %s (device %d)", action, nextTime)
 		untilNextAction := nextTime.Sub(now)
 		timer := time.NewTimer(untilNextAction)
@@ -178,14 +189,17 @@ func signalHandler(quit chan bool) {
 	log.Println("Received signal: ", sig)
 }
 
-func main() {
-	configuration := []ScheduleConfigItem{
-		{2, TurnOn, "1,2,3,4,5,6,0", "15:00"},
-		{2, TurnOff, "0,1,2,3,4", "22:15"},
-		{2, TurnOff, "5,6", "23:00"},
-		{2, TurnOn, "1,2,3,4,5", "07:15"},
-		{2, TurnOff, "1,2,3,4,5", "09:00"},
+func GetConfiguration() []ScheduleConfigItem {
+	return []ScheduleConfigItem{
+		{2, "1,2,3,4,5,6,0", "15:00", "22:15"},
+		{2, "1,2,3,4,5,6,0", "07:15", "09:30"},
+		{1, "1,2,3,4,5,6,0", "05:35", "11:00"},
+		{1, "1,2,3,4,5,6,0", "13:00", "22:15"},
 	}
+}
+
+func main() {
+	configuration := GetConfiguration()
 	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
 	if err == nil {
 		log.SetOutput(logfile)
@@ -196,7 +210,13 @@ func main() {
 	}
 	log.Println("Starting")
 	now := time.Now()
-	action, _ := nextActionAfter(now, configuration)
+	for i := 0; i < 8; i = i + 1 {
+		device, action, next := nextActionAfter(now, configuration)
+		fmt.Println(device, next, action)
+		now = next
+	}
+	/// Set correct light status at startup
+	_, action, _ := nextActionAfter(now, configuration)
 	if action == TurnOff {
 		go doTellstickAction(TurnOn)
 	} else {
