@@ -61,6 +61,7 @@ type ScheduledEvent struct {
 
 type ScheduledEvents []ScheduledEvent
 
+/* Functions for sorting ScheduledEvents */
 func (se ScheduledEvents) Len() int           { return len(se) }
 func (se ScheduledEvents) Swap(i, j int)      { se[i], se[j] = se[j], se[i] }
 func (se ScheduledEvents) Less(i, j int) bool { return se[i].time.Before(se[j].time) }
@@ -73,13 +74,16 @@ func timeFromString(now time.Time, clock string) (time.Time) {
 }
 
 func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events ScheduledEvents) {
-	events = make(ScheduledEvents, 0, 8)
-	weekDayToSelect := now.Weekday()
-	for _, v := range schedule {
+	const MAX_EVENTS_PER_DAY_PER_DEVICE = 8
+	events = ScheduledEvents{}
+	currentWeekDay := now.Weekday()
+	for _, v := range schedule { // unused return value ?
+		device := v.device
+
 		weekdays := strings.Split(v.weekdays, ",")
-		for _, wdStr := range weekdays {
-			wd, _ := strconv.Atoi(wdStr)
-			if weekDayToSelect == time.Weekday(wd) {
+		for _, dayInWeekString := range weekdays {
+			dayInWeek, _ := strconv.Atoi(dayInWeekString)
+			if currentWeekDay == time.Weekday(dayInWeek) {
 				var hour int
 				var minute int
 				/*if v.timeFrom == "SUNSET" {*/
@@ -98,9 +102,8 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 					hour, _ = strconv.Atoi(timeStr[0])
 					minute, _ = strconv.Atoi(timeStr[1])
 				}
-				newPos := len(events)
-				events = events[0 : newPos+1]
-				events[newPos] = ScheduledEvent{v.device, TurnOn, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
+				newEvent := ScheduledEvent{device, TurnOn, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
+				events = append(events, newEvent)
 
 				// TURN OFF
 				if v.timeTo[2] == ':'{
@@ -108,9 +111,8 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 					hour, _ = strconv.Atoi(timeStr[0])
 					minute, _ = strconv.Atoi(timeStr[1])
 				}
-				newPos = len(events)
-				events = events[0 : newPos+1]
-				events[newPos] = ScheduledEvent{v.device, TurnOff, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
+				newEvent = ScheduledEvent{device, TurnOff, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
+				events = append(events, newEvent)
 			}
 		}
 	}
@@ -132,7 +134,7 @@ func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (int, Action,
 	return 0, TurnOn, now
 }
 
-func doTellstickAction(action Action) {
+func doTellstickAction(device int, action Action) {
 	var tellstickCmd string
 	if action == TurnOn {
 		tellstickCmd = "--on"
@@ -140,9 +142,9 @@ func doTellstickAction(action Action) {
 		tellstickCmd = "--off"
 	}
 	/*cmd := exec.Command("tdtool", tellstickCmd, "2")*/
-	cmd := exec.Command("echo", tellstickCmd, "2")
+	cmd := exec.Command("echo", tellstickCmd, strconv.Itoa(device))
 	b, err := cmd.CombinedOutput()
-	log.Println("Turning device:", action)
+	log.Println("Turning device", device, ":", action)
 	if err != nil {
 		log.Println("Error executing Tellstick action: ", cmd)
 		// Some kind error handling
@@ -157,7 +159,7 @@ func doTellstickAction(action Action) {
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	for i := 0; i < 4 * 7; i++ {
-		device, action, next := nextActionAfter(now, GetConfiguration())
+		device, action, next := nextActionAfter(now, getConfiguration())
 		fmt.Println(device, next, action)
 		now = next
 	}
@@ -166,8 +168,8 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 func schedule(configuration []ScheduleConfigItem, quit chan bool) {
 	for {
 		now := time.Now()
-		_, action, nextTime := nextActionAfter(now, configuration)
-		log.Printf("Next event: %s @ %s (device %d)", action, nextTime)
+		device, action, nextTime := nextActionAfter(now, configuration)
+		log.Printf("Next event: %s @ %s (device %d)", action, nextTime, device)
 		untilNextAction := nextTime.Sub(now)
 		timer := time.NewTimer(untilNextAction)
 		select {
@@ -176,7 +178,7 @@ func schedule(configuration []ScheduleConfigItem, quit chan bool) {
 			return
 		case <-timer.C:
 			log.Println("Executing action: ", action)
-			doTellstickAction(action)
+			doTellstickAction(device, action)
 		}
 	}
 }
@@ -189,17 +191,30 @@ func signalHandler(quit chan bool) {
 	log.Println("Received signal: ", sig)
 }
 
-func GetConfiguration() []ScheduleConfigItem {
+func getConfiguration() []ScheduleConfigItem {
 	return []ScheduleConfigItem{
-		{2, "1,2,3,4,5,6,0", "15:00", "22:15"},
-		{2, "1,2,3,4,5,6,0", "07:15", "09:30"},
-		{1, "1,2,3,4,5,6,0", "05:35", "11:00"},
-		{1, "1,2,3,4,5,6,0", "13:00", "22:15"},
+		/*{2, "1,2,3,4,5,6,0", "15:00", "22:15"},*/
+		/*{2, "1,2,3,4,5,6,0", "07:15", "09:30"},*/
+		/*{1, "1,2,3,4,5,6,0", "05:35", "11:00"},*/
+		/*{1, "1,2,3,4,5,6,0", "13:00", "22:15"},*/
+		{3, "1,2,3,4,5,6,0", "22:40", "22:41"},
+		{4, "1,2,3,4,5,6,0", "22:40", "22:41"},
 	}
 }
 
+func configuredDevices(configuration []ScheduleConfigItem) (devices []int) {
+	deviceMap := map[int]bool{}
+	for _, i := range configuration {
+		deviceMap[i.device] = true
+	}
+	for k := range deviceMap {
+		devices = append(devices, k)
+	}
+	return devices
+}
+
 func main() {
-	configuration := GetConfiguration()
+	configuration := getConfiguration()
 	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
 	if err == nil {
 		log.SetOutput(logfile)
@@ -210,17 +225,33 @@ func main() {
 	}
 	log.Println("Starting")
 	now := time.Now()
+
+	// DEBUG
 	for i := 0; i < 8; i = i + 1 {
 		device, action, next := nextActionAfter(now, configuration)
-		fmt.Println(device, next, action)
+		fmt.Println("DEBUG: ", device, next, action)
 		now = next
 	}
+
 	/// Set correct light status at startup
-	_, action, _ := nextActionAfter(now, configuration)
-	if action == TurnOff {
-		go doTellstickAction(TurnOn)
-	} else {
-		go doTellstickAction(TurnOff)
+	// TODO: incorrent assumption. Should iterate backwards in time instead
+	for _, device := range configuredDevices(getConfiguration()) {
+		now := time.Now()
+		var nextAction Action
+		for {
+			nextDevice, action, next := nextActionAfter(now, configuration)
+			if nextDevice == device {
+				nextAction = action
+				break
+			}
+			now = next
+		}
+		fmt.Println("Turning device inverse of ", device, " ", nextAction)
+		if nextAction == TurnOff {
+			go doTellstickAction(device, TurnOn)
+		} else {
+			go doTellstickAction(device, TurnOff)
+		}
 	}
 	quit := make(chan bool)
 	go schedule(configuration, quit)
