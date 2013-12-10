@@ -3,10 +3,10 @@
 clear
 while [ 1 ] 
 do
-    #inotifywait -q -e modify -e create -e delete . > /dev/null
-    inotifywait -q -e modify *.go > /dev/null
     clear
     #go build && scp lightserver pi:
-    #go build
-    go test
+    go build && echo "go build OK"
+    #go test && echo "go test OK"
+    #inotifywait -q -e modify -e create -e delete . > /dev/null
+    inotifywait -q -e modify *.go > /dev/null
 done
