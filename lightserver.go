@@ -4,6 +4,7 @@ import (
 	/*"bufio"*/
 	/*"encoding/json"*/
 	/*"github.com/cpucycle/astrotime"*/
+	"container/heap"
 	"log"
 	"fmt"
 	"net/http"
@@ -31,12 +32,6 @@ const (
 	TurnOff
 )
 
-type LightStatus struct {
-	Id    int
-	Name  string
-	State Action
-}
-
 func (a Action) String() string {
 	if a == TurnOn {
 		return "ON"
@@ -61,10 +56,25 @@ type ScheduledEvent struct {
 
 type ScheduledEvents []ScheduledEvent
 
+var eventQueue *ScheduledEvents
+
 /* Functions for sorting ScheduledEvents */
 func (se ScheduledEvents) Len() int           { return len(se) }
 func (se ScheduledEvents) Swap(i, j int)      { se[i], se[j] = se[j], se[i] }
-func (se ScheduledEvents) Less(i, j int) bool { return se[i].time.Before(se[j].time) }
+func (se ScheduledEvents) Less(i, j int) bool { return !se[i].time.Before(se[j].time) }
+
+/* heap functions */
+func (se *ScheduledEvents) Pop() interface{} {
+	old := *se
+	n := len(old)
+	x := old[n-1]
+	*se = old[0 : n-1]
+	return x
+}
+
+func (se *ScheduledEvents) Push(x interface{}) {
+	*se = append(*se, x.(ScheduledEvent))
+}
 
 func timeFromString(now time.Time, clock string) (time.Time) {
 	timeStr := strings.Split(clock, ":")
@@ -157,28 +167,41 @@ func doTellstickAction(device int, action Action) {
 */
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
-	now := time.Now()
-	for i := 0; i < 4 * 7; i++ {
-		device, action, next := nextActionAfter(now, getConfiguration())
-		fmt.Println(device, next, action)
-		now = next
+	for i := eventQueue.Len(); i > 0; i-- {
+		e := (*eventQueue)[i-1]
+		fmt.Fprintf(w, "%3s %d @ %s\n", e.action, e.device, e.time)
 	}
 }
 
-func schedule(configuration []ScheduleConfigItem, quit chan bool) {
+func schedule(events *ScheduledEvents, quit chan bool) {
+	now := time.Now()
 	for {
-		now := time.Now()
-		device, action, nextTime := nextActionAfter(now, configuration)
-		log.Printf("Next event: %s @ %s (device %d)", action, nextTime, device)
-		untilNextAction := nextTime.Sub(now)
-		timer := time.NewTimer(untilNextAction)
-		select {
-		case <-quit:
-			log.Println("Quit scheduling")
-			return
-		case <-timer.C:
-			log.Println("Executing action: ", action)
-			doTellstickAction(device, action)
+		for events.Len() > 0 {
+			event := events.Pop().(ScheduledEvent)
+			log.Printf("Next event: %s @ %s (device %d)", event.action, event.time, event.device)
+			now2 := time.Now()
+			if now2.Before(event.time) {
+				untilNextAction := event.time.Sub(now2)
+				log.Printf("Sleeping for %s", untilNextAction)
+				timer := time.NewTimer(untilNextAction)
+				select {
+				case <-quit:
+					log.Println("Quit scheduling")
+					return
+				case <-timer.C:
+					log.Println("Executing action: ", event.action)
+					doTellstickAction(event.device, event.action)
+				}
+			} else {
+				log.Println("Executing action: ", event.action)
+				doTellstickAction(event.device, event.action)
+			}
+		}
+		fmt.Println("Adding events")
+		now = now.Add(OneDay)
+		for _, event := range eventsForDay(now, getConfiguration()) {
+			log.Println("Adding event @", event.time)
+			eventQueue.Push(event)
 		}
 	}
 }
@@ -193,12 +216,13 @@ func signalHandler(quit chan bool) {
 
 func getConfiguration() []ScheduleConfigItem {
 	return []ScheduleConfigItem{
-		/*{2, "1,2,3,4,5,6,0", "15:00", "22:15"},*/
-		/*{2, "1,2,3,4,5,6,0", "07:15", "09:30"},*/
-		/*{1, "1,2,3,4,5,6,0", "05:35", "11:00"},*/
-		/*{1, "1,2,3,4,5,6,0", "13:00", "22:15"},*/
-		{3, "1,2,3,4,5,6,0", "22:40", "22:41"},
-		{4, "1,2,3,4,5,6,0", "22:40", "22:41"},
+		{2, "1,2,3,4,5,6,0", "15:00", "22:15"},
+		{2, "1,2,3,4,5,6,0", "07:15", "09:30"},
+		{1, "1,2,3,4,5,6,0", "05:35", "11:00"},
+		{1, "1,2,3,4,5,6,0", "13:00", "22:15"},
+		{3, "1,2,3,4,5,6,0", "16:49", "17:49"},
+		{4, "1,2,3,4,5,6,0", "16:49", "17:49"},
+		{5, "0", "22:40", "22:41"},
 	}
 }
 
@@ -214,7 +238,6 @@ func configuredDevices(configuration []ScheduleConfigItem) (devices []int) {
 }
 
 func main() {
-	configuration := getConfiguration()
 	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
 	if err == nil {
 		log.SetOutput(logfile)
@@ -225,16 +248,24 @@ func main() {
 	}
 	log.Println("Starting")
 	now := time.Now()
+	eventQueue = &ScheduledEvents{}
+	heap.Init(eventQueue)
+	for _, event := range eventsForDay(now, getConfiguration()) {
+		if now.Before(event.time) {
+			eventQueue.Push(event)
+		}
+	}
 
 	// DEBUG
-	for i := 0; i < 8; i = i + 1 {
-		device, action, next := nextActionAfter(now, configuration)
-		fmt.Println("DEBUG: ", device, next, action)
-		now = next
+	for i := eventQueue.Len(); i > 0; i-- {
+		e := (*eventQueue)[i-1]
+		fmt.Println(e.time, e.device)
 	}
 
 	/// Set correct light status at startup
+	// BUG: use the eventQueue instead?
 	// TODO: incorrent assumption. Should iterate backwards in time instead
+	/*
 	for _, device := range configuredDevices(getConfiguration()) {
 		now := time.Now()
 		var nextAction Action
@@ -253,8 +284,9 @@ func main() {
 			go doTellstickAction(device, TurnOff)
 		}
 	}
+	*/
 	quit := make(chan bool)
-	go schedule(configuration, quit)
+	go schedule(eventQueue, quit)
 	http.HandleFunc("/status", statusHandler)
 	go http.ListenAndServe(":8081", nil)
 	signalHandler(quit)
