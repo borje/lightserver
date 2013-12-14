@@ -76,11 +76,11 @@ func (se *ScheduledEvents) Push(x interface{}) {
 	*se = append(*se, x.(ScheduledEvent))
 }
 
-func timeFromString(now time.Time, clock string) (time.Time) {
+func timeFromString(theDay time.Time, clock string) (time.Time) {
 	timeStr := strings.Split(clock, ":")
 	hour, _ := strconv.Atoi(timeStr[0])
 	minute, _ := strconv.Atoi(timeStr[1])
-	return time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())
+	return time.Date(theDay.Year(), theDay.Month(), theDay.Day(), hour, minute, 0, 0, theDay.Location())
 }
 
 func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events ScheduledEvents) {
@@ -89,13 +89,12 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 	currentWeekDay := now.Weekday()
 	for _, v := range schedule { // unused return value ?
 		device := v.device
-
 		weekdays := strings.Split(v.weekdays, ",")
 		for _, dayInWeekString := range weekdays {
 			dayInWeek, _ := strconv.Atoi(dayInWeekString)
 			if currentWeekDay == time.Weekday(dayInWeek) {
-				var hour int
-				var minute int
+				/*var hour int*/
+				/*var minute int*/
 				/*if v.timeFrom == "SUNSET" {*/
 					/*sunset := astrotime.CalcSunset(now, LATITUDE, LONGITUDE)*/
 					/*hour = sunset.Hour()*/
@@ -108,21 +107,15 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 
 				// TURN ON
 				if v.timeFrom[2] == ':'{
-					timeStr := strings.Split(v.timeFrom, ":")
-					hour, _ = strconv.Atoi(timeStr[0])
-					minute, _ = strconv.Atoi(timeStr[1])
+					newEvent := ScheduledEvent{device, TurnOn, timeFromString(now, v.timeFrom)}
+					events = append(events, newEvent)
 				}
-				newEvent := ScheduledEvent{device, TurnOn, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
-				events = append(events, newEvent)
 
 				// TURN OFF
 				if v.timeTo[2] == ':'{
-					timeStr := strings.Split(v.timeTo, ":")
-					hour, _ = strconv.Atoi(timeStr[0])
-					minute, _ = strconv.Atoi(timeStr[1])
+					newEvent := ScheduledEvent{device, TurnOff, timeFromString(now, v.timeTo)}
+					events = append(events, newEvent)
 				}
-				newEvent = ScheduledEvent{device, TurnOff, time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())}
-				events = append(events, newEvent)
 			}
 		}
 	}
@@ -130,19 +123,19 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 	return
 }
 
-func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (int, Action, time.Time) {
-	for {
-		for _, event := range eventsForDay(now, schedule) {
-			if event.time.After(now) {
-				return event.device, event.action, event.time
-			}
-		}
-		nextDay := now.Add(OneDay)
-		now = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location())
-	}
-	log.Fatal("Should not return here")
-	return 0, TurnOn, now
-}
+/*func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (int, Action, time.Time) {*/
+	/*for {*/
+		/*for _, event := range eventsForDay(now, schedule) {*/
+			/*if event.time.After(now) {*/
+				/*return event.device, event.action, event.time*/
+			/*}*/
+		/*}*/
+		/*nextDay := now.Add(OneDay)*/
+		/*now = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location())*/
+	/*}*/
+	/*log.Fatal("Should not return here")*/
+	/*return 0, TurnOn, now*/
+/*}*/
 
 func doTellstickAction(device int, action Action) {
 	var tellstickCmd string
@@ -174,16 +167,14 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func schedule(events *ScheduledEvents, quit chan bool) {
-	now := time.Now()
+	currentDay := time.Now()
 	for {
 		for events.Len() > 0 {
 			event := events.Pop().(ScheduledEvent)
 			log.Printf("Next event: %s @ %s (device %d)", event.action, event.time, event.device)
-			now2 := time.Now()
-			if now2.Before(event.time) {
-				untilNextAction := event.time.Sub(now2)
-				log.Printf("Sleeping for %s", untilNextAction)
-				timer := time.NewTimer(untilNextAction)
+			if now := time.Now(); now.Before(event.time) {
+				log.Printf("Sleeping for %s", event.time.Sub(now))
+				timer := time.NewTimer(event.time.Sub(now))
 				select {
 				case <-quit:
 					log.Println("Quit scheduling")
@@ -198,8 +189,8 @@ func schedule(events *ScheduledEvents, quit chan bool) {
 			}
 		}
 		fmt.Println("Adding events")
-		now = now.Add(OneDay)
-		for _, event := range eventsForDay(now, getConfiguration()) {
+		currentDay = currentDay.Add(OneDay)
+		for _, event := range eventsForDay(currentDay, getConfiguration()) {
 			log.Println("Adding event @", event.time)
 			eventQueue.Push(event)
 		}
@@ -237,6 +228,10 @@ func configuredDevices(configuration []ScheduleConfigItem) (devices []int) {
 	return devices
 }
 
+func initialState() {
+
+}
+
 func main() {
 	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
 	if err == nil {
@@ -259,7 +254,7 @@ func main() {
 	// DEBUG
 	for i := eventQueue.Len(); i > 0; i-- {
 		e := (*eventQueue)[i-1]
-		fmt.Println(e.time, e.device)
+		fmt.Println(e.time, e.device, e.action)
 	}
 
 	/// Set correct light status at startup
