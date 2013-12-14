@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -19,7 +18,6 @@ import (
 )
 
 const (
-	OneDay             = time.Hour * 24
 	LATITUDE           = 58.410807
 	LONGITUDE          = -15.6213727
 	LOG_FILE           = "lightserver.log"
@@ -119,23 +117,8 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 			}
 		}
 	}
-	sort.Sort(events)
 	return
 }
-
-/*func nextActionAfter(now time.Time, schedule []ScheduleConfigItem) (int, Action, time.Time) {*/
-	/*for {*/
-		/*for _, event := range eventsForDay(now, schedule) {*/
-			/*if event.time.After(now) {*/
-				/*return event.device, event.action, event.time*/
-			/*}*/
-		/*}*/
-		/*nextDay := now.Add(OneDay)*/
-		/*now = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location())*/
-	/*}*/
-	/*log.Fatal("Should not return here")*/
-	/*return 0, TurnOn, now*/
-/*}*/
 
 func doTellstickAction(device int, action Action) {
 	var tellstickCmd string
@@ -152,7 +135,7 @@ func doTellstickAction(device int, action Action) {
 		log.Println("Error executing Tellstick action: ", cmd)
 		// Some kind error handling
 	}
-	log.Printf("%s", b)
+	log.Printf("CombinedOutput: %s", b)
 }
 
 /*
@@ -180,20 +163,14 @@ func schedule(events *ScheduledEvents, quit chan bool) {
 					log.Println("Quit scheduling")
 					return
 				case <-timer.C:
-					log.Println("Executing action: ", event.action)
 					doTellstickAction(event.device, event.action)
 				}
 			} else {
-				log.Println("Executing action: ", event.action)
 				doTellstickAction(event.device, event.action)
 			}
 		}
-		fmt.Println("Adding events")
-		currentDay = currentDay.Add(OneDay)
-		for _, event := range eventsForDay(currentDay, getConfiguration()) {
-			log.Println("Adding event @", event.time)
-			eventQueue.Push(event)
-		}
+		currentDay = currentDay.AddDate(0, 0, 1)
+		addEventForDay(currentDay)
 	}
 }
 
@@ -213,7 +190,7 @@ func getConfiguration() []ScheduleConfigItem {
 		{1, "1,2,3,4,5,6,0", "13:00", "22:15"},
 		{3, "1,2,3,4,5,6,0", "16:49", "17:49"},
 		{4, "1,2,3,4,5,6,0", "16:49", "17:49"},
-		{5, "0", "22:40", "22:41"},
+		{5, "4", "22:40", "22:41"},
 	}
 }
 
@@ -228,8 +205,41 @@ func configuredDevices(configuration []ScheduleConfigItem) (devices []int) {
 	return devices
 }
 
-func initialState() {
+func addEventForDay(day time.Time) {
+	for _, event := range eventsForDay(day, getConfiguration()) {
+		log.Println("Adding event @", event.time)
+		eventQueue.Push(event)
+	}
+}
 
+func initialState() time.Time {
+	log.Println("Initial states")
+	now := time.Now()
+	currentDay := now
+	for _, device := range configuredDevices(getConfiguration()) {
+		actionFound := false
+		for actionFound == false {
+			for _, event := range *eventQueue { // Iterate the help backwards
+				if event.device == device && event.time.Before(now) {
+					doTellstickAction(device, event.action)
+					actionFound = true
+					break
+				}
+			}
+			if actionFound == false {
+				addEventForDay(currentDay)
+				currentDay = currentDay.AddDate(0, 0, -1)
+			}
+		}
+	}
+	// remove old events
+	for eventQueue.Len() > 0 {
+		next := eventQueue.Pop().(ScheduledEvent)
+		if next.time.After(now) {
+			break
+		}
+	}
+	return now
 }
 
 func main() {
@@ -242,44 +252,16 @@ func main() {
 		} ()
 	}
 	log.Println("Starting")
-	now := time.Now()
 	eventQueue = &ScheduledEvents{}
 	heap.Init(eventQueue)
-	for _, event := range eventsForDay(now, getConfiguration()) {
-		if now.Before(event.time) {
-			eventQueue.Push(event)
-		}
-	}
+	initialState()
 
 	// DEBUG
-	for i := eventQueue.Len(); i > 0; i-- {
-		e := (*eventQueue)[i-1]
-		fmt.Println(e.time, e.device, e.action)
-	}
+	/*for i := eventQueue.Len(); i > 0; i-- {*/
+		/*e := (*eventQueue)[i-1]*/
+		/*fmt.Println(e.time, e.device, e.action)*/
+	/*}*/
 
-	/// Set correct light status at startup
-	// BUG: use the eventQueue instead?
-	// TODO: incorrent assumption. Should iterate backwards in time instead
-	/*
-	for _, device := range configuredDevices(getConfiguration()) {
-		now := time.Now()
-		var nextAction Action
-		for {
-			nextDevice, action, next := nextActionAfter(now, configuration)
-			if nextDevice == device {
-				nextAction = action
-				break
-			}
-			now = next
-		}
-		fmt.Println("Turning device inverse of ", device, " ", nextAction)
-		if nextAction == TurnOff {
-			go doTellstickAction(device, TurnOn)
-		} else {
-			go doTellstickAction(device, TurnOff)
-		}
-	}
-	*/
 	quit := make(chan bool)
 	go schedule(eventQueue, quit)
 	http.HandleFunc("/status", statusHandler)
