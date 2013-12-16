@@ -82,7 +82,6 @@ func timeFromString(theDay time.Time, clock string) (time.Time) {
 }
 
 func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events ScheduledEvents) {
-	const MAX_EVENTS_PER_DAY_PER_DEVICE = 8
 	events = ScheduledEvents{}
 	currentWeekDay := now.Weekday()
 	for _, v := range schedule { // unused return value ?
@@ -252,12 +251,6 @@ func main() {
 	eventQueue = &ScheduledEvents{}
 	heap.Init(eventQueue)
 	initialState()
-
-	// DEBUG
-	for i := eventQueue.Len(); i > 0; i-- {
-		e := (*eventQueue)[i-1]
-		fmt.Println(e.time, e.device, e.action)
-	}
 
 	quit := make(chan bool)
 	go schedule(eventQueue, quit)
