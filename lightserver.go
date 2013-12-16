@@ -59,7 +59,7 @@ var eventQueue *ScheduledEvents
 /* Functions for sorting ScheduledEvents */
 func (se ScheduledEvents) Len() int           { return len(se) }
 func (se ScheduledEvents) Swap(i, j int)      { se[i], se[j] = se[j], se[i] }
-func (se ScheduledEvents) Less(i, j int) bool { return !se[i].time.Before(se[j].time) }
+func (se ScheduledEvents) Less(i, j int) bool { return !se[i].time.After(se[j].time) }
 
 /* heap functions */
 func (se *ScheduledEvents) Pop() interface{} {
@@ -127,8 +127,7 @@ func doTellstickAction(device int, action Action) {
 	} else {
 		tellstickCmd = "--off"
 	}
-	/*cmd := exec.Command("tdtool", tellstickCmd, "2")*/
-	cmd := exec.Command("echo", tellstickCmd, strconv.Itoa(device))
+	cmd := exec.Command("tdtool", tellstickCmd, strconv.Itoa(device))
 	b, err := cmd.CombinedOutput()
 	log.Println("Turning device", device, ":", action)
 	if err != nil {
@@ -153,7 +152,7 @@ func schedule(events *ScheduledEvents, quit chan bool) {
 	currentDay := time.Now()
 	for {
 		for events.Len() > 0 {
-			event := events.Pop().(ScheduledEvent)
+			event := heap.Pop(events).(ScheduledEvent)
 			log.Printf("Next event: %s @ %s (device %d)", event.action, event.time, event.device)
 			if now := time.Now(); now.Before(event.time) {
 				log.Printf("Sleeping for %s", event.time.Sub(now))
@@ -184,9 +183,9 @@ func signalHandler(quit chan bool) {
 
 func getConfiguration() []ScheduleConfigItem {
 	return []ScheduleConfigItem{
-		{2, "1,2,3,4,5,6,0", "07:15", "09:30"},
-		{2, "1,2,3,4,5,6,0", "14:00", "22:15"},
-		{1, "1,2,3,4,5,6,0", "07:00", "22:15"},
+		{2, "1,2,3,4,5,0", "07:15", "09:15"},
+		{2, "1,2,3,4,5,0", "14:30", "22:15"},
+		{1, "1,2,3,4,5,0", "05:30", "22:15"},
 	}
 }
 
@@ -204,7 +203,7 @@ func configuredDevices(configuration []ScheduleConfigItem) (devices []int) {
 func addEventForDay(day time.Time) {
 	for _, event := range eventsForDay(day, getConfiguration()) {
 		log.Println("Adding event @", event.time)
-		eventQueue.Push(event)
+		heap.Push(eventQueue, event)
 	}
 }
 
@@ -230,8 +229,10 @@ func initialState() time.Time {
 	}
 	// remove old events
 	for eventQueue.Len() > 0 {
-		next := eventQueue.Pop().(ScheduledEvent)
+		next := heap.Pop(eventQueue).(ScheduledEvent)
+		log.Printf("Removing %d @ %s", next.device, next.time)
 		if next.time.After(now) {
+			heap.Push(eventQueue, next)
 			break
 		}
 	}
@@ -253,10 +254,10 @@ func main() {
 	initialState()
 
 	// DEBUG
-	/*for i := eventQueue.Len(); i > 0; i-- {*/
-		/*e := (*eventQueue)[i-1]*/
-		/*fmt.Println(e.time, e.device, e.action)*/
-	/*}*/
+	for i := eventQueue.Len(); i > 0; i-- {
+		e := (*eventQueue)[i-1]
+		fmt.Println(e.time, e.device, e.action)
+	}
 
 	quit := make(chan bool)
 	go schedule(eventQueue, quit)
