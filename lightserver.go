@@ -3,7 +3,7 @@ package main
 import (
 	/*"bufio"*/
 	/*"encoding/json"*/
-	/*"github.com/cpucycle/astrotime"*/
+	"github.com/cpucycle/astrotime"
 	"container/heap"
 	"log"
 	"fmt"
@@ -90,26 +90,19 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 		for _, dayInWeekString := range weekdays {
 			dayInWeek, _ := strconv.Atoi(dayInWeekString)
 			if currentWeekDay == time.Weekday(dayInWeek) {
-				/*var hour int*/
-				/*var minute int*/
-				/*if v.timeFrom == "SUNSET" {*/
-					/*sunset := astrotime.CalcSunset(now, LATITUDE, LONGITUDE)*/
-					/*hour = sunset.Hour()*/
-					/*minute = sunset.Minute()*/
-				/*} else if v.time == "SUNRISE" {*/
-					/*sunset := astrotime.CalcSunrise(now, LATITUDE, LONGITUDE)*/
-					/*hour = sunset.Hour()*/
-					/*minute = sunset.Minute()*/
-				/*} else if v.time[2] == ':' {*/
-
 				// TURN ON
-				if v.timeFrom[2] == ':'{
+				if v.timeFrom == "SUNSET" {
+					newEvent := ScheduledEvent{device, TurnOn, astrotime.CalcSunset(now, LATITUDE, LONGITUDE)}
+					events = append(events, newEvent)
+				} else if v.timeFrom[2] == ':' {
 					newEvent := ScheduledEvent{device, TurnOn, timeFromString(now, v.timeFrom)}
 					events = append(events, newEvent)
 				}
-
 				// TURN OFF
-				if v.timeTo[2] == ':'{
+				if v.timeTo == "SUNRISE" {
+					newEvent := ScheduledEvent{device, TurnOff, astrotime.CalcSunrise(now, LATITUDE, LONGITUDE)}
+					events = append(events, newEvent)
+				} else if v.timeTo[2] == ':'{
 					newEvent := ScheduledEvent{device, TurnOff, timeFromString(now, v.timeTo)}
 					events = append(events, newEvent)
 				}
@@ -194,8 +187,8 @@ func signalHandler(quit chan bool) {
 
 func getConfiguration() []ScheduleConfigItem {
 	return []ScheduleConfigItem{
-		{2, "1,2,3,4,5,6,0", "07:15", "09:15"},
-		{2, "1,2,3,4,5,6,0", "14:30", "22:15"},
+		{2, "1,2,3,4,5,6,0", "07:15", "SUNRISE"},
+		{2, "1,2,3,4,5,6,0", "SUNSET", "22:15"},
 		{1, "1,2,3,4,5,6,0", "07:00", "22:15"},
 	}
 }
