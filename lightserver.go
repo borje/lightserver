@@ -147,6 +147,18 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func logHandler(w http.ResponseWriter, r *http.Request) {
+	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
+	if err == nil {
+		log.SetOutput(logfile)
+		defer func () {
+			log.Println("Exiting")
+			logfile.Close()
+		} ()
+	}
+
+}
+
 func schedule(events *ScheduledEvents, quit chan bool) {
 	currentDay := time.Now()
 	for {
