@@ -91,20 +91,22 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 			dayInWeek, _ := strconv.Atoi(dayInWeekString)
 			if currentWeekDay == time.Weekday(dayInWeek) {
 				// TURN ON
+				var onEvent ScheduledEvent;
+				var offEvent ScheduledEvent;
 				if v.timeFrom == "SUNSET" {
-					newEvent := ScheduledEvent{device, TurnOn, astrotime.CalcSunset(now, LATITUDE, LONGITUDE)}
-					events = append(events, newEvent)
+					onEvent = ScheduledEvent{device, TurnOn, astrotime.CalcSunset(now, LATITUDE, LONGITUDE)}
 				} else if v.timeFrom[2] == ':' {
-					newEvent := ScheduledEvent{device, TurnOn, timeFromString(now, v.timeFrom)}
-					events = append(events, newEvent)
+					onEvent = ScheduledEvent{device, TurnOn, timeFromString(now, v.timeFrom)}
 				}
 				// TURN OFF
 				if v.timeTo == "SUNRISE" {
-					newEvent := ScheduledEvent{device, TurnOff, astrotime.CalcSunrise(now, LATITUDE, LONGITUDE)}
-					events = append(events, newEvent)
+					offEvent = ScheduledEvent{device, TurnOff, astrotime.CalcSunrise(now, LATITUDE, LONGITUDE)}
 				} else if v.timeTo[2] == ':'{
-					newEvent := ScheduledEvent{device, TurnOff, timeFromString(now, v.timeTo)}
-					events = append(events, newEvent)
+					offEvent = ScheduledEvent{device, TurnOff, timeFromString(now, v.timeTo)}
+				}
+				if (onEvent.time.Before(offEvent.time)) {
+					events = append(events, onEvent)
+					events = append(events, offEvent)
 				}
 			}
 		}
