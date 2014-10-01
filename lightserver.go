@@ -2,8 +2,8 @@ package main
 
 import (
 	/*"bufio"*/
-	/*"encoding/json"*/
 	"container/heap"
+	"encoding/json"
 	"fmt"
 	"github.com/cpucycle/astrotime"
 	"log"
@@ -40,10 +40,10 @@ func (a Action) String() string {
 }
 
 type ScheduleConfigItem struct {
-	device   int
-	weekdays string
-	timeFrom string
-	timeTo   string
+	Device   int
+	Weekdays string
+	TimeFrom string
+	TimeTo   string
 }
 
 type ScheduledEvent struct {
@@ -85,24 +85,24 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 	events = ScheduledEvents{}
 	currentWeekDay := now.Weekday()
 	for _, v := range schedule { // unused return value ?
-		device := v.device
-		weekdays := strings.Split(v.weekdays, ",")
+		device := v.Device
+		weekdays := strings.Split(v.Weekdays, ",")
 		for _, dayInWeekString := range weekdays {
 			dayInWeek, _ := strconv.Atoi(dayInWeekString)
 			if currentWeekDay == time.Weekday(dayInWeek) {
 				// TURN ON
 				var onEvent ScheduledEvent
 				var offEvent ScheduledEvent
-				if v.timeFrom == "SUNSET" {
+				if v.TimeFrom == "SUNSET" {
 					onEvent = ScheduledEvent{device, TurnOn, astrotime.CalcSunset(now, LATITUDE, LONGITUDE)}
-				} else if v.timeFrom[2] == ':' {
-					onEvent = ScheduledEvent{device, TurnOn, timeFromString(now, v.timeFrom)}
+				} else if v.TimeFrom[2] == ':' {
+					onEvent = ScheduledEvent{device, TurnOn, timeFromString(now, v.TimeFrom)}
 				}
 				// TURN OFF
-				if v.timeTo == "SUNRISE" {
+				if v.TimeTo == "SUNRISE" {
 					offEvent = ScheduledEvent{device, TurnOff, astrotime.CalcSunrise(now, LATITUDE, LONGITUDE)}
-				} else if v.timeTo[2] == ':' {
-					offEvent = ScheduledEvent{device, TurnOff, timeFromString(now, v.timeTo)}
+				} else if v.TimeTo[2] == ':' {
+					offEvent = ScheduledEvent{device, TurnOff, timeFromString(now, v.TimeTo)}
 				}
 				if onEvent.time.Before(offEvent.time) {
 					events = append(events, onEvent)
@@ -188,18 +188,27 @@ func signalHandler(quit chan bool) {
 }
 
 func getConfiguration() []ScheduleConfigItem {
-	return []ScheduleConfigItem{
-		{2, "1,2,3,4,5", "06:15", "SUNRISE"},
-		{2, "6,0", "07:15", "SUNRISE"},
-		{2, "1,2,3,4,5,6,0", "SUNSET", "22:15"},
-		{1, "1,2,3,4,5,6,0", "07:00", "22:15"},
+	jsonStream := `
+	[
+	{"device": 2, "weekdays": "1,2,3,4,5", "timeFrom": "06:15", "timeTo": "SUNRISE"},
+	{"device": 2, "weekdays": "6,0", "timeFrom": "07:15", "timeTo": "SUNRISE"},
+	{"device": 2, "weekdays": "1,2,3,4,5,6,0", "timeFrom": "SUNSET", "timeTo": "22:15"},
+	{"device": 1, "weekdays": "1,2,3,4,5,6,0", "timeFrom": "07:00", "timeTo": "22:15"}
+	]`
+	jsonDecoder := json.NewDecoder(strings.NewReader(jsonStream))
+	var config []ScheduleConfigItem
+	err := jsonDecoder.Decode(&config)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+	return config
 }
 
 func configuredDevices(configuration []ScheduleConfigItem) (devices []int) {
 	deviceMap := map[int]bool{}
 	for _, i := range configuration {
-		deviceMap[i.device] = true
+		deviceMap[i.Device] = true
 	}
 	for k := range deviceMap {
 		devices = append(devices, k)
