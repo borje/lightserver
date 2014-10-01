@@ -3,24 +3,24 @@ package main
 import (
 	/*"bufio"*/
 	/*"encoding/json"*/
-	"github.com/cpucycle/astrotime"
 	"container/heap"
-	"log"
 	"fmt"
+	"github.com/cpucycle/astrotime"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
-	"time"
-	"os/signal"
 	"syscall"
+	"time"
 )
 
 const (
-	LATITUDE           = 58.410807
-	LONGITUDE          = -15.6213727
-	LOG_FILE           = "lightserver.log"
+	LATITUDE  = 58.410807
+	LONGITUDE = -15.6213727
+	LOG_FILE  = "lightserver.log"
 )
 
 type Action int
@@ -43,7 +43,7 @@ type ScheduleConfigItem struct {
 	device   int
 	weekdays string
 	timeFrom string
-	timeTo	 string
+	timeTo   string
 }
 
 type ScheduledEvent struct {
@@ -74,7 +74,7 @@ func (se *ScheduledEvents) Push(x interface{}) {
 	*se = append(*se, x.(ScheduledEvent))
 }
 
-func timeFromString(theDay time.Time, clock string) (time.Time) {
+func timeFromString(theDay time.Time, clock string) time.Time {
 	timeStr := strings.Split(clock, ":")
 	hour, _ := strconv.Atoi(timeStr[0])
 	minute, _ := strconv.Atoi(timeStr[1])
@@ -91,8 +91,8 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 			dayInWeek, _ := strconv.Atoi(dayInWeekString)
 			if currentWeekDay == time.Weekday(dayInWeek) {
 				// TURN ON
-				var onEvent ScheduledEvent;
-				var offEvent ScheduledEvent;
+				var onEvent ScheduledEvent
+				var offEvent ScheduledEvent
 				if v.timeFrom == "SUNSET" {
 					onEvent = ScheduledEvent{device, TurnOn, astrotime.CalcSunset(now, LATITUDE, LONGITUDE)}
 				} else if v.timeFrom[2] == ':' {
@@ -101,10 +101,10 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 				// TURN OFF
 				if v.timeTo == "SUNRISE" {
 					offEvent = ScheduledEvent{device, TurnOff, astrotime.CalcSunrise(now, LATITUDE, LONGITUDE)}
-				} else if v.timeTo[2] == ':'{
+				} else if v.timeTo[2] == ':' {
 					offEvent = ScheduledEvent{device, TurnOff, timeFromString(now, v.timeTo)}
 				}
-				if (onEvent.time.Before(offEvent.time)) {
+				if onEvent.time.Before(offEvent.time) {
 					events = append(events, onEvent)
 					events = append(events, offEvent)
 				}
@@ -143,13 +143,13 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logHandler(w http.ResponseWriter, r *http.Request) {
-	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
+	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err == nil {
 		log.SetOutput(logfile)
-		defer func () {
+		defer func() {
 			log.Println("Exiting")
 			logfile.Close()
-		} ()
+		}()
 	}
 
 }
@@ -247,13 +247,13 @@ func initialState() time.Time {
 }
 
 func main() {
-	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
+	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err == nil {
 		log.SetOutput(logfile)
-		defer func () {
+		defer func() {
 			log.Println("Exiting")
 			logfile.Close()
-		} ()
+		}()
 	}
 	log.Println("Starting")
 	eventQueue = &ScheduledEvents{}
