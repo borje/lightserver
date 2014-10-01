@@ -189,7 +189,8 @@ func signalHandler(quit chan bool) {
 
 func getConfiguration() []ScheduleConfigItem {
 	return []ScheduleConfigItem{
-		{2, "1,2,3,4,5,6,0", "07:15", "SUNRISE"},
+		{2, "1,2,3,4,5", "06:15", "SUNRISE"},
+		{2, "6,0", "07:15", "SUNRISE"},
 		{2, "1,2,3,4,5,6,0", "SUNSET", "22:15"},
 		{1, "1,2,3,4,5,6,0", "07:00", "22:15"},
 	}
