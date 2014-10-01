@@ -4,9 +4,7 @@ create symlink to lightserverd in /etc/init.d
 sudo update-rc.d lightserverd defaults
 
 TODO:
-Redesign the configuration since the present does not support to skip a "turn on"
-period if TurnOn happens after TurnOff
+Read the configuration from a text file
+Read Tina's schedule and act accordingly
 
-Proposal:
-OFF: 0645
-ON:  SUNRISE
+
