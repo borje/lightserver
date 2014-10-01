@@ -199,7 +199,7 @@ func getConfiguration() []ScheduleConfigItem {
 	var config []ScheduleConfigItem
 	err := jsonDecoder.Decode(&config)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 	return config
