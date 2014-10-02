@@ -230,7 +230,7 @@ func initialState() time.Time {
 	for _, device := range configuredDevices(getConfiguration()) {
 		actionFound := false
 		for actionFound == false {
-			for _, event := range *eventQueue { // Iterate the help backwards
+			for _, event := range *eventQueue { // Iterate the heap backwards
 				if event.device == device && event.time.Before(now) {
 					doTellstickAction(device, event.action)
 					actionFound = true
