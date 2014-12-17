@@ -1,7 +1,7 @@
 package main
 
 import (
-	/*"bufio"*/
+	"bufio"
 	"container/heap"
 	"encoding/json"
 	"fmt"
@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strconv"
 	"strings"
@@ -143,13 +142,14 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logHandler(w http.ResponseWriter, r *http.Request) {
-	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logfile, err := os.Open(LOG_FILE)
 	if err == nil {
-		log.SetOutput(logfile)
 		defer func() {
-			log.Println("Exiting")
 			logfile.Close()
 		}()
+		log.Println("loghandler is called")
+		reader := bufio.NewReader(logfile)
+		reader.WriteTo(w)
 	}
 
 }
@@ -273,6 +273,7 @@ func main() {
 	quit := make(chan bool)
 	go schedule(eventQueue, quit)
 	http.HandleFunc("/status", statusHandler)
+	http.HandleFunc("/log", logHandler)
 	go http.ListenAndServe(":8081", nil)
 	signalHandler(quit)
 }
