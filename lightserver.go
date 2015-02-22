@@ -1,11 +1,9 @@
 package main
 
 import (
-	/*"bufio"*/
 	"container/heap"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/cpucycle/astrotime"
 	"log"
 	"net/http"
@@ -39,7 +37,6 @@ func (a Action) String() string {
 	} else {
 		return "OFF"
 	}
-	return ""
 }
 
 type ScheduleConfigItem struct {
@@ -132,29 +129,6 @@ func doTellstickAction(device int, action Action) {
 		// Some kind error handling
 	}
 	log.Printf("CombinedOutput: %s", b)
-}
-
-/*
-  Web interface
-*/
-
-func statusHandler(w http.ResponseWriter, r *http.Request) {
-	for i := eventQueue.Len(); i > 0; i-- {
-		e := (*eventQueue)[i-1]
-		fmt.Fprintf(w, "%3s %d @ %s\n", e.action, e.device, e.time)
-	}
-}
-
-func logHandler(w http.ResponseWriter, r *http.Request) {
-	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err == nil {
-		log.SetOutput(logfile)
-		defer func() {
-			log.Println("Exiting")
-			logfile.Close()
-		}()
-	}
-
 }
 
 func schedule(events *ScheduledEvents, quit chan bool) {
