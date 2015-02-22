@@ -4,6 +4,7 @@ import (
 	/*"bufio"*/
 	"container/heap"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/cpucycle/astrotime"
 	"log"
@@ -16,6 +17,8 @@ import (
 	"syscall"
 	"time"
 )
+
+var configFile = flag.String("configfile", "config.json", "The Config")
 
 const (
 	LATITUDE  = 58.410807
@@ -188,19 +191,17 @@ func signalHandler(quit chan bool) {
 }
 
 func getConfiguration() []ScheduleConfigItem {
-	jsonStream := `
-	[
-	{"device": 2, "weekdays": "1,2,3,4,5", "timeFrom": "06:15", "timeTo": "SUNRISE"},
-	{"device": 2, "weekdays": "6,0", "timeFrom": "07:15", "timeTo": "SUNRISE"},
-	{"device": 2, "weekdays": "1,2,3,4,5,6,0", "timeFrom": "SUNSET", "timeTo": "22:15"},
-	{"device": 1, "weekdays": "1,2,3,4,5,6,0", "timeFrom": "07:00", "timeTo": "22:15"}
-	]`
-	jsonDecoder := json.NewDecoder(strings.NewReader(jsonStream))
-	var config []ScheduleConfigItem
-	err := jsonDecoder.Decode(&config)
+	f, err := os.Open(*configFile)
+	log.Println(*configFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
+		log.Fatal("Error opening ", *configFile, " Error: ", err)
+	}
+
+	jsonDecoder := json.NewDecoder(f)
+	var config []ScheduleConfigItem
+	err = jsonDecoder.Decode(&config)
+	if err != nil {
+		log.Fatal(err)
 	}
 	return config
 }
@@ -257,6 +258,7 @@ func initialState() time.Time {
 }
 
 func main() {
+	flag.Parse()
 	logfile, err := os.OpenFile(LOG_FILE, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err == nil {
 		log.SetOutput(logfile)
