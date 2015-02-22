@@ -1,6 +1,26 @@
 [
-{"device": 2, "weekdays": "1,2,3,4,5", "timeFrom": "06:15", "timeTo": "SUNRISE"},
-{"device": 2, "weekdays": "6,0", "timeFrom": "07:15", "timeTo": "SUNRISE"},
-{"device": 2, "weekdays": "1,2,3,4,5,6,0", "timeFrom": "SUNSET", "timeTo": "22:15"},
-{"device": 1, "weekdays": "1,2,3,4,5,6,0", "timeFrom": "07:00", "timeTo": "22:15"}
+   {
+      "device":2,
+      "weekdays":"1,2,3,4,5",
+      "timeFrom":"06:15",
+      "timeTo":"SUNRISE"
+   },
+   {
+      "device":2,
+      "weekdays":"6,0",
+      "timeFrom":"07:15",
+      "timeTo":"SUNRISE"
+   },
+   {
+      "device":2,
+      "weekdays":"1,2,3,4,5,6,0",
+      "timeFrom":"SUNSET",
+      "timeTo":"22:15"
+   },
+   {
+      "device":1,
+      "weekdays":"1,2,3,4,5,6,0",
+      "timeFrom":"07:00",
+      "timeTo":"22:15"
+   }
 ]
