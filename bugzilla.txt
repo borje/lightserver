@@ -1,0 +1,36 @@
+Efter strömavbrott
+git version:  d6dbee654f114df2295db1ab092c5483c7be67b4
+{"device": 2, "weekdays": "1,2,3,4,5", "timeFrom": "06:15", "timeTo": "SUNRISE"},
+{"device": 2, "weekdays": "6,0", "timeFrom": "07:15", "timeTo": "SUNRISE"},
+{"device": 2, "weekdays": "1,2,3,4,5,6,0", "timeFrom": "SUNSET", "timeTo": "22:15"},
+{"device": 1, "weekdays": "1,2,3,4,5,6,0", "timeFrom": "07:00", "timeTo": "22:15"}
+
+2014/10/02 22:15:01 Sleeping for 7h59m58.673382788s
+2014/10/03 02:17:23 Starting
+2014/10/03 02:17:23 Initial states
+2014/10/03 02:17:23 Adding event @ 2014-10-03 06:15:00 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-03 07:06:18 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-03 18:25:34 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-03 22:15:00 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-03 07:00:00 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-03 22:15:00 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-02 06:15:00 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-02 07:04:05 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-02 18:28:24 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-02 22:15:00 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-02 07:00:00 +0200 CEST
+2014/10/03 02:17:23 Adding event @ 2014-10-02 22:15:00 +0200 CEST
+2014/10/03 02:17:23 Turning device 2 : ON
+2014/10/03 02:17:24 CombinedOutput: Turning on device 2, lampa - Success
+2014/10/03 02:17:24 Turning device 1 : ON
+2014/10/03 02:17:24 CombinedOutput: Turning on device 1, popcorn hour - Success
+2014/10/03 02:17:24 Removing 2 @ 2014-10-02 06:15:00 +0200 CEST
+2014/10/03 02:17:24 Removing 1 @ 2014-10-02 07:00:00 +0200 CEST
+2014/10/03 02:17:24 Removing 2 @ 2014-10-02 07:04:05 +0200 CEST
+2014/10/03 02:17:24 Removing 2 @ 2014-10-02 18:28:24 +0200 CEST
+2014/10/03 02:17:24 Removing 2 @ 2014-10-02 22:15:00 +0200 CEST
+2014/10/03 02:17:24 Removing 1 @ 2014-10-02 22:15:00 +0200 CEST
+2014/10/03 02:17:24 Removing 2 @ 2014-10-03 06:15:00 +0200 CEST
+2014/10/03 02:17:24 Next event: ON @ 2014-10-03 06:15:00 +0200 CEST (device 2)
+2014/10/03 02:17:24 Sleeping for 3h57m35.355427385s
+
