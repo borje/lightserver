@@ -219,6 +219,7 @@ func configuredDevices(configuration []ScheduleConfigItem) (devices []int) {
 func addEventForDay(day time.Time) {
 	for _, event := range eventsForDay(day, getConfiguration()) {
 		log.Println("Adding ", event.action, " event @", event.time)
+		fmt.Println("Adding ", event.action, " event @", event.time)
 		heap.Push(eventQueue, event)
 	}
 }
@@ -226,14 +227,18 @@ func addEventForDay(day time.Time) {
 func initialState() time.Time {
 	log.Println("Initial states")
 	now := time.Now()
+	now = time.Date(2014, 10, 3, 7, 15, 0, 0, now.Location())
 	currentDay := now
+	fmt.Println(now)
 	for _, device := range configuredDevices(getConfiguration()) {
 		actionFound := false
 		for actionFound == false {
 			for i := range *eventQueue {
 				event := (*eventQueue)[eventQueue.Len()-1-i] // Iterate the heap backwards
+				fmt.Println(event.device, event.time)
 				if event.device == device && event.time.Before(now) {
-					doTellstickAction(device, event.action)
+					fmt.Println("DO: ", device, event.action, event.time)
+					//doTellstickAction(device, event.action)
 					actionFound = true
 					break
 				}
