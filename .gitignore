@@ -2,3 +2,4 @@ lightserver
 *.swp
 *.swo
 lightserver.log
+currentVersion.go

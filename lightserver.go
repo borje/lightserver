@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"lightserver/scheduler"
 	"log"
 	"net/http"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/unrolled/render"
 )
+
+//go:generate /bin/sh ./git_revision_go_func.sh
 
 var configFile = flag.String("configfile", "config.json", "The Config")
 var debug = flag.Bool("debug", false, "Print logging to stderr instead of file")
@@ -42,12 +45,13 @@ func main() {
 			}()
 		}
 	}
-	log.Println("Starting")
+	log.Println("Starting lightserver version ", currentVersion())
 	scheduler := scheduler.NewScheduler(*configFile)
 
 	quit := make(chan bool)
 	go scheduler.Schedule(quit)
 	http.HandleFunc("/status", StatusWrapper(scheduler))
+	http.HandleFunc("/version", versionHandler)
 	go http.ListenAndServe(":8081", nil)
 	signalHandler(quit)
 }
@@ -58,4 +62,8 @@ func StatusWrapper(s *scheduler.Scheduler) http.HandlerFunc {
 		log.Println("/status is called")
 		rend.JSON(w, http.StatusOK, s.EventQueue())
 	}
+}
+
+func versionHandler(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "git version: %s\n", currentVersion())
 }
