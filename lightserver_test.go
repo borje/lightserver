@@ -3,6 +3,7 @@ package main
 import (
 	"container/heap"
 	"fmt"
+	"lightserver/scheduler"
 	"testing"
 	"time"
 )
@@ -10,11 +11,11 @@ import (
 func TestParseResponse(t *testing.T) {
 	//theDay := time.Now()
 	//tm := time.Date(theDay.Year(), theDay.Month(), theDay.Day(), 19, 10, 0, 0, theDay.Location())
-	h := &ScheduledEvents{}
+	h := &scheduler.ScheduledEvents{}
 	heap.Init(h)
 	for i := 0; i < 10; i++ {
 		tm := time.Now()
-		e := ScheduledEvent{1, TurnOn, tm}
+		e := scheduler.ScheduledEvent{1, scheduler.TurnOn, tm}
 		heap.Push(h, e)
 		time.Sleep(time.Second / 5)
 	}
@@ -29,11 +30,11 @@ func TestParseResponse(t *testing.T) {
 	fmt.Println("========")
 
 	for h.Len() > 0 {
-		e := heap.Pop(h).(ScheduledEvent)
-		fmt.Println(e.time)
+		e := heap.Pop(h).(scheduler.ScheduledEvent)
+		fmt.Println(e.Time)
 	}
 }
 
-func TestAsdf(t *testing.T) {
+func TestInitState(t *testing.T) {
 
 }
