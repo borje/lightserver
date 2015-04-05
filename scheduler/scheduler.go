@@ -185,7 +185,7 @@ func (this *Scheduler) initialState() time.Time {
 	currentDay := now
 	for _, device := range configuredDevices(getConfiguration(this.configFile)) {
 		actionFound := false
-		for actionFound == false {
+		for !actionFound {
 			for i := range *this.eventQueue {
 				event := (*this.eventQueue)[this.eventQueue.Len()-1-i] // Iterate the heap backwards
 				if event.Device == device && event.Time.Before(now) {
@@ -194,7 +194,7 @@ func (this *Scheduler) initialState() time.Time {
 					break
 				}
 			}
-			if actionFound == false {
+			if !actionFound {
 				addEventForDay(this.eventQueue, this.configItems, currentDay)
 				currentDay = currentDay.AddDate(0, 0, -1)
 			}
