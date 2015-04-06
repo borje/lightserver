@@ -54,24 +54,7 @@ func main() {
 	go scheduler.Schedule(quit)
 	http.HandleFunc("/status", StatusWrapper(scheduler))
 	http.HandleFunc("/info", infoHandler)
+	http.HandleFunc("/log", logHandler)
 	go http.ListenAndServe(":8081", nil)
 	signalHandler(quit)
-}
-
-func StatusWrapper(s *scheduler.Scheduler) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		log.Println("/info is called")
-		rend.JSON(w, http.StatusOK, s.EventQueue())
-	}
-}
-
-type buildInfo struct {
-	Version   string `json:"version"`
-	BuildTime string `json:"buildTime"`
-}
-
-func infoHandler(w http.ResponseWriter, req *http.Request) {
-	info := buildInfo{Version: currentVersion(),
-		BuildTime: buildTime()}
-	rend.JSON(w, http.StatusOK, info)
 }
