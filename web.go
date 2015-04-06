@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	"io"
 	"lightserver/scheduler"
 	"net/http"
 	"os"
@@ -30,7 +30,10 @@ func logHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Can't open log file", http.StatusInternalServerError)
 		return
 	}
-	writer := bufio.NewWriter(w)
-	writer.ReadFrom(file)
-	writer.Flush()
+
+	_, err = io.Copy(w, file)
+	if err != nil {
+		http.Error(w, "Unable to write log", http.StatusInternalServerError)
+		return
+	}
 }
