@@ -55,6 +55,7 @@ func main() {
 	http.HandleFunc("/status", StatusWrapper(scheduler))
 	http.HandleFunc("/info", infoHandler)
 	http.HandleFunc("/log", logHandler)
+	http.Handle("/", http.FileServer(http.Dir("static")))
 	go http.ListenAndServe(":8081", nil)
 	signalHandler(quit)
 }

@@ -3,7 +3,8 @@ publish:
 	./armbuild.sh || exit 1
 
 	ssh pi "sudo service lightserverd stop" || exit 1
-	scp lightserver pi: || exit 1
+	scp lightserver pi:lightserver/ || exit 1
+	scp -r static pi:lightserver/ || exit 1
 	ssh pi "sudo service lightserverd start" || exit 1
 
 
