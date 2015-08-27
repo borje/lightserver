@@ -32,6 +32,13 @@ func signalHandler(quit chan bool) {
 
 var rend *render.Render
 
+func logDecorate(f func(w http.ResponseWriter, req *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		log.Println(req.Method, req.RequestURI, " from", req.RemoteAddr)
+		f(w, req)
+	}
+}
+
 func main() {
 	flag.Parse()
 	defer func() {
@@ -52,9 +59,9 @@ func main() {
 
 	quit := make(chan bool)
 	go scheduler.Schedule(quit)
-	http.HandleFunc("/status", StatusWrapper(scheduler))
-	http.HandleFunc("/info", infoHandler)
-	http.HandleFunc("/log", logHandler)
+	http.HandleFunc("/status", logDecorate(StatusWrapper(scheduler)))
+	http.HandleFunc("/info", logDecorate(infoHandler))
+	http.HandleFunc("/log", logDecorate(logHandler))
 	http.Handle("/", http.FileServer(http.Dir("static")))
 	go http.ListenAndServe(":8081", nil)
 	signalHandler(quit)
