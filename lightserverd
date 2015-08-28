@@ -15,7 +15,7 @@
 set -e
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/bin
-DAEMON=/home/pi/lightserver
+DAEMON=/home/pi/lightserver/lightserver
 
 test -x $DAEMON || exit 0
 
