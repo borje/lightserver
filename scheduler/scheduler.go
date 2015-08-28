@@ -141,7 +141,6 @@ func configuredDevices(configuration []ScheduleConfigItem) (devices []int) {
 
 func getConfiguration(file string) []ScheduleConfigItem {
 	f, err := os.Open(file)
-	log.Println(file)
 	if err != nil {
 		log.Fatal("Error opening ", file, " Error: ", err)
 	}
