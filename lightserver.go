@@ -53,7 +53,7 @@ func main() {
 			}()
 		}
 	} else {
-		log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+		log.SetFlags(log.Flags() | log.Lshortfile)
 	}
 	log.Println("Starting lightserver version ", currentVersion())
 	rend = render.New(render.Options{IndentJSON: true})
