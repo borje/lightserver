@@ -24,16 +24,21 @@ func infoHandler(w http.ResponseWriter, req *http.Request) {
 	rend.JSON(w, http.StatusOK, info)
 }
 
-func logHandler(w http.ResponseWriter, req *http.Request) {
-	file, err := os.Open(LOG_FILE)
-	if err != nil {
-		http.Error(w, "Can't open log file", http.StatusInternalServerError)
-		return
-	}
+func fileReturnHandler(filename string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		file, err := os.Open(filename)
+		if err != nil {
+			http.Error(w, "Can't open file", http.StatusInternalServerError)
+			return
+		}
+		defer func() {
+			file.Close()
+		}()
 
-	_, err = io.Copy(w, file)
-	if err != nil {
-		http.Error(w, "Unable to write log", http.StatusInternalServerError)
-		return
+		_, err = io.Copy(w, file)
+		if err != nil {
+			http.Error(w, "Unable to read file", http.StatusInternalServerError)
+			return
+		}
 	}
 }
