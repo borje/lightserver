@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/unrolled/render"
 	"github.com/gorilla/mux"
+	"github.com/unrolled/render"
 )
 
 //go:generate /bin/sh ./generate_build_info.sh
@@ -65,7 +65,8 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/status", logDecorate(StatusWrapper(scheduler)))
 	router.HandleFunc("/info", logDecorate(infoHandler))
-	router.HandleFunc("/log", logDecorate(logHandler))
+	router.HandleFunc("/config", logDecorate(fileReturnHandler(*configFile)))
+	router.HandleFunc("/log", logDecorate(fileReturnHandler(LOG_FILE)))
 	router.HandleFunc("/schedule", logDecorate(scheduleHandler))
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static")))
 	http.Handle("/", router)
