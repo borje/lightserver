@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/unrolled/render"
+	"github.com/gorilla/mux"
 )
 
 //go:generate /bin/sh ./generate_build_info.sh
@@ -61,10 +62,13 @@ func main() {
 
 	quit := make(chan bool)
 	go scheduler.Schedule(quit)
-	http.HandleFunc("/status", logDecorate(StatusWrapper(scheduler)))
-	http.HandleFunc("/info", logDecorate(infoHandler))
-	http.HandleFunc("/log", logDecorate(logHandler))
-	http.Handle("/", http.FileServer(http.Dir("static")))
+	router := mux.NewRouter()
+	router.HandleFunc("/status", logDecorate(StatusWrapper(scheduler)))
+	router.HandleFunc("/info", logDecorate(infoHandler))
+	router.HandleFunc("/log", logDecorate(logHandler))
+	router.HandleFunc("/schedule", logDecorate(scheduleHandler))
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static")))
+	http.Handle("/", router)
 	go http.ListenAndServe(":8081", nil)
 	signalHandler(quit)
 }

@@ -5,6 +5,7 @@ import (
 	"lightserver/scheduler"
 	"net/http"
 	"os"
+	"time"
 )
 
 func StatusWrapper(s *scheduler.Scheduler) http.HandlerFunc {
@@ -37,3 +38,12 @@ func logHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 }
+
+func scheduleHandler(w http.ResponseWriter, req *http.Request) {
+		f, _ := os.Open(*configFile)
+		s := scheduler.NewSchedulerFromReader(f)
+		s.AddEventsForDay(time.Now())
+		defer f.Close()
+		rend.JSON(w, http.StatusOK, s.EventQueue())
+	}
+
