@@ -67,7 +67,7 @@ func main() {
 	router.HandleFunc("/info", logDecorate(infoHandler))
 	router.HandleFunc("/config", logDecorate(fileReturnHandler(*configFile)))
 	router.HandleFunc("/log", logDecorate(fileReturnHandler(LOG_FILE)))
-	router.HandleFunc("/schedule", logDecorate(scheduleHandler))
+	router.HandleFunc("/schedule/{year}/{month}/{day}", logDecorate(scheduleHandler))
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static")))
 	http.Handle("/", router)
 	go http.ListenAndServe(":8081", nil)
