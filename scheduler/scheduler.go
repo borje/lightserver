@@ -182,7 +182,7 @@ func (this *Scheduler) initialState() time.Time {
 	log.Println("Initial states")
 	now := time.Now()
 	currentDay := now
-	for _, device := range configuredDevices(getConfiguration(this.configFile)) {
+	for _, device := range configuredDevices(this.configItems) {
 		actionFound := false
 		for !actionFound {
 			for i := range *this.eventQueue {
