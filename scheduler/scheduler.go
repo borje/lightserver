@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"io"
 	"container/heap"
 	"encoding/json"
 	"log"
@@ -53,6 +54,21 @@ type ScheduleConfigItem struct {
 }
 
 type ScheduledEvents []ScheduledEvent
+
+
+func NewSchedulerFromReader(r io.Reader) *Scheduler {
+	scheduler := &Scheduler{
+		configFile: "",
+		eventQueue: &ScheduledEvents{},
+	}
+	jsonDecoder := json.NewDecoder(r)
+	err := jsonDecoder.Decode(&scheduler.configItems)
+	if err != nil {
+		log.Fatal(err)
+	}
+	heap.Init(scheduler.eventQueue)
+	return scheduler
+}
 
 func NewScheduler(configFile string) *Scheduler {
 	scheduler := &Scheduler{
@@ -152,6 +168,12 @@ func getConfiguration(file string) []ScheduleConfigItem {
 		log.Fatal(err)
 	}
 	return config
+}
+
+func (this *Scheduler) AddEventsForDay(day time.Time) {
+	for _, event := range eventsForDay(day, this.configItems) {
+		heap.Push(this.eventQueue, event)
+	}
 }
 
 func addEventForDay(eq *ScheduledEvents, configItems []ScheduleConfigItem, day time.Time) {
