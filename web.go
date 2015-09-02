@@ -30,7 +30,7 @@ func infoHandler(w http.ResponseWriter, req *http.Request) {
 	rend.JSON(w, http.StatusOK, info)
 }
 
-func fileReturnHandler(filename string) func(http.ResponseWriter, *http.Request) {
+func fileReturnHandler(filename string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		file, err := os.Open(filename)
 		if err != nil {

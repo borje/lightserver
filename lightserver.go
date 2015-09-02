@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
@@ -33,10 +34,11 @@ func signalHandler(quit chan bool) {
 
 var rend *render.Render
 
-func logDecorate(f func(w http.ResponseWriter, req *http.Request)) func(http.ResponseWriter, *http.Request) {
+func logDecorate(f func(w http.ResponseWriter, req *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		log.Println(req.Method, req.RequestURI, " from", req.RemoteAddr)
+		start := time.Now()
 		f(w, req)
+		log.Printf("%s\t%s\t%s\tfrom %s", req.Method, req.RequestURI, time.Since(start), req.RemoteAddr)
 	}
 }
 
