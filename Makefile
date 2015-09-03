@@ -1,3 +1,6 @@
+lightserver:
+	go generate
+	go build
 publish:
 	go generate || exit 1
 	./armbuild.sh || exit 1
