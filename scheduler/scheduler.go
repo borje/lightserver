@@ -237,8 +237,9 @@ func (this *Scheduler) Schedule(quit chan bool) {
 	currentDay := time.Now()
 	for {
 		for this.eventQueue.Len() > 0 {
-			event := heap.Pop(this.eventQueue).(ScheduledEvent)
+			event := (*this.eventQueue)[0]
 			log.Printf("Next event: %s @ %s (device %d)", event.Action, event.Time, event.Device)
+			log.Println("Peeking")
 			if now := time.Now(); now.Before(event.Time) {
 				log.Printf("Sleeping for %s", event.Time.Sub(now))
 				timer := time.NewTimer(event.Time.Sub(now))
@@ -253,6 +254,8 @@ func (this *Scheduler) Schedule(quit chan bool) {
 			} else {
 				doTellstickAction(event.Device, event.Action)
 			}
+			log.Println("Poping")
+			heap.Pop(this.eventQueue)
 		}
 		currentDay = currentDay.AddDate(0, 0, 1)
 		addEventForDay(this.eventQueue, this.configItems, currentDay)
