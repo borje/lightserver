@@ -14,6 +14,8 @@ import (
 	"github.com/unrolled/render"
 )
 
+import _ "net/http/pprof"
+
 //go:generate /bin/sh ./generate_build_info.sh
 
 var configFile = flag.String("configfile", "config.json", "The Config")
@@ -34,12 +36,18 @@ func signalHandler(quit chan bool) {
 
 var rend *render.Render
 
-func logDecorate(f func(w http.ResponseWriter, req *http.Request)) http.HandlerFunc {
+func logHandlerFunc(f func(w http.ResponseWriter, req *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		start := time.Now()
 		f(w, req)
-		log.Printf("%s\t%s\t%s\tfrom %s", req.Method, req.RequestURI, time.Since(start), req.RemoteAddr)
+		log.Printf("%s\t%-15s\t%s\tfrom %s", req.Method, req.RequestURI, time.Since(start), req.RemoteAddr)
 	}
+}
+
+func logHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		logHandlerFunc(h.ServeHTTP)(w, req)
+	})
 }
 
 func main() {
@@ -65,12 +73,12 @@ func main() {
 	quit := make(chan bool)
 	go scheduler.Schedule(quit)
 	router := mux.NewRouter()
-	router.HandleFunc("/status", logDecorate(StatusWrapper(scheduler)))
-	router.HandleFunc("/info", logDecorate(infoHandler))
-	router.HandleFunc("/config", logDecorate(fileReturnHandler(*configFile)))
-	router.HandleFunc("/log", logDecorate(fileReturnHandler(LOG_FILE)))
-	router.HandleFunc("/schedule/{year}/{month}/{day}", logDecorate(scheduleHandler))
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static")))
+	router.HandleFunc("/status", logHandlerFunc(StatusWrapper(scheduler)))
+	router.HandleFunc("/info", logHandlerFunc(infoHandler))
+	router.HandleFunc("/config", logHandlerFunc(fileReturnHandler(*configFile)))
+	router.HandleFunc("/log", logHandlerFunc(fileReturnHandler(LOG_FILE)))
+	router.HandleFunc("/schedule/{year}/{month}/{day}", logHandlerFunc(scheduleHandler))
+	router.PathPrefix("/").Handler(logHandler(http.FileServer(http.Dir("static"))))
 	http.Handle("/", router)
 	go http.ListenAndServe(":8081", nil)
 	signalHandler(quit)
