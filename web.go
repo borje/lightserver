@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -15,7 +16,9 @@ import (
 
 func StatusWrapper(s *scheduler.Scheduler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		rend.JSON(w, http.StatusOK, s.EventQueue())
+		eventsCopy := s.EventQueue()
+		sort.Sort(eventsCopy)
+		rend.JSON(w, http.StatusOK, eventsCopy)
 	}
 }
 
