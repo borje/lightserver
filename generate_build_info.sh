@@ -12,7 +12,7 @@ func buildTime() string {
 EOF
 
 VERSION=$(git rev-parse --short HEAD)
-BUILDTIME=$(stat -f "%Sm")
+BUILDTIME=$(stat -f "%Sm" lightserver)
 sed -e "s/GIT_HASH/$VERSION/g" -e "s/BUILD_TIME/$BUILDTIME/g" $GOFILE > $GOFILE.tmp || exit 1
 mv $GOFILE.tmp $GOFILE
 
