@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
 )
@@ -79,7 +80,8 @@ func main() {
 	router.HandleFunc("/log", logHandlerFunc(fileReturnHandler(LOG_FILE)))
 	router.HandleFunc("/schedule/{year}/{month}/{day}", logHandlerFunc(scheduleHandler))
 	router.PathPrefix("/").Handler(logHandler(http.FileServer(http.Dir("static"))))
-	http.Handle("/", router)
-	go http.ListenAndServe(":8081", nil)
+	n := negroni.New()
+	n.UseHandler(router)
+	go n.Run(":8081")
 	signalHandler(quit)
 }
