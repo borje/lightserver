@@ -12,6 +12,7 @@ import (
 
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
+	"github.com/nabeken/negroni-auth"
 	"github.com/unrolled/render"
 )
 
@@ -81,6 +82,7 @@ func main() {
 	router.HandleFunc("/schedule/{year}/{month}/{day}", logHandlerFunc(scheduleHandler))
 	router.PathPrefix("/").Handler(logHandler(http.FileServer(http.Dir("static"))))
 	n := negroni.New()
+	n.Use(auth.Basic("lightuser", "serverpass"))
 	n.UseHandler(router)
 	go n.Run(":8081")
 	signalHandler(quit)
