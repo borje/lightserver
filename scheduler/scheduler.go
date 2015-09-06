@@ -80,8 +80,8 @@ func NewScheduler(configFile string) *Scheduler {
 	return scheduler
 }
 
-func (s *Scheduler) EventQueue() *ScheduledEvents {
-	return s.eventQueue
+func (s *Scheduler) EventQueue() ScheduledEvents {
+	return *s.eventQueue
 }
 
 // Helper functions

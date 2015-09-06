@@ -1,7 +1,6 @@
 package main
 
 import (
-	"container/heap"
 	"fmt"
 	"io"
 	"lightserver/scheduler"
@@ -65,12 +64,6 @@ func scheduleHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	s.AddEventsForDay(t)
 
-	numEvents := len(*s.EventQueue())
-	events := make(scheduler.ScheduledEvents, 0, numEvents)
-	for len(*s.EventQueue()) > 0 {
-		e := heap.Pop(s.EventQueue()).(scheduler.ScheduledEvent)
-		events = append(events, e)
-	}
-
-	rend.JSON(w, http.StatusOK, events)
+	sort.Sort(s.EventQueue())
+	rend.JSON(w, http.StatusOK, s.EventQueue())
 }
