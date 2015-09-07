@@ -8,4 +8,9 @@ Update configuration from web interface
 Add oauth authentication
 Read Tina's schedule and act accordingly
 use light bulb image from http://blog.1000bulbs.com/wp-content/uploads/2013/09/off-and-on-bulb.jpg
+view current light status
+Toggle lightstatus via web interface
+Change to other configuration file format
+use https://github.com/hlandau/service for deamon stuff
+Use c-bindings instead of command line
 
