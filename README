@@ -4,6 +4,8 @@ create symlink to lightserverd in /etc/init.d
 sudo update-rc.d lightserverd defaults
 
 TODO:
+Wrong state when started after all events that day
+slow performanve if using http basic auth
 Update configuration from web interface
 Add oauth authentication
 Read Tina's schedule and act accordingly
