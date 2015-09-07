@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -81,7 +82,10 @@ func NewScheduler(configFile string) *Scheduler {
 }
 
 func (s *Scheduler) EventQueue() ScheduledEvents {
-	return *s.eventQueue
+	eq := make(ScheduledEvents, len(*s.eventQueue))
+	copy(eq, *s.eventQueue)
+	sort.Sort(&eq)
+	return eq
 }
 
 // Helper functions
@@ -93,9 +97,13 @@ func timeFromString(theDay time.Time, clock string) time.Time {
 }
 
 /* Functions for sorting ScheduledEvents */
-func (se ScheduledEvents) Len() int           { return len(se) }
-func (se ScheduledEvents) Swap(i, j int)      { se[i], se[j] = se[j], se[i] }
-func (se ScheduledEvents) Less(i, j int) bool { return !se[i].Time.After(se[j].Time) }
+func (se ScheduledEvents) Len() int      { return len(se) }
+func (se ScheduledEvents) Swap(i, j int) { se[i], se[j] = se[j], se[i] }
+func (se ScheduledEvents) Less(i, j int) bool {
+	left := se[i].Time
+	right := se[j].Time
+	return left != right && right.After(left)
+}
 
 /* heap functions */
 func (se *ScheduledEvents) Pop() interface{} {
