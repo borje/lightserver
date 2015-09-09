@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 	"time"
 
@@ -16,12 +17,11 @@ import (
 	"github.com/unrolled/render"
 )
 
-import _ "net/http/pprof"
-
 //go:generate /bin/sh ./generate_build_info.sh
 
 var configFile = flag.String("configfile", "config.json", "The Config")
 var debug = flag.Bool("debug", false, "Print logging to stderr instead of file")
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
 const (
 	LOG_FILE = "lightserver.log"
@@ -53,6 +53,16 @@ func logHandler(h http.Handler) http.Handler {
 }
 
 func main() {
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	flag.Parse()
 	defer func() {
 		log.Println("Exiting")

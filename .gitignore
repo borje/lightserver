@@ -4,3 +4,4 @@ lightserver.exe
 *.swo
 lightserver.log
 buildinfo.go
+*.pprof
