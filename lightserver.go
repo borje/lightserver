@@ -89,10 +89,19 @@ func main() {
 	router.HandleFunc("/info", logHandlerFunc(infoHandler))
 	router.HandleFunc("/config", logHandlerFunc(fileReturnHandler(*configFile)))
 	router.HandleFunc("/log", logHandlerFunc(fileReturnHandler(LOG_FILE)))
-	router.HandleFunc("/schedule/{year}/{month}/{day}", logHandlerFunc(scheduleHandler))
+	router.HandleFunc("/schedule/{year:[0-9]+}/{month:[0-9]+}/{day:[0-9]+}", logHandlerFunc(scheduleHandler))
 	router.PathPrefix("/").Handler(logHandler(http.FileServer(http.Dir("static"))))
-	n := negroni.New()
-	n.Use(auth.Basic("lightuser", "serverpass"))
+
+	controlRouter := mux.NewRouter()
+	controlRouter.HandleFunc("/control/{device:[0-9]+}/{action}", logHandlerFunc(controlHandler))
+	controlNegroni := negroni.New()
+	controlNegroni.UseHandler(controlRouter)
+	if !*debug {
+		controlNegroni.Use(negroni.HandlerFunc(auth.Basic("lightuser", "serverpass")))
+	}
+	router.PathPrefix("/control/").Handler(controlNegroni)
+
+	n := negroni.Classic()
 	n.UseHandler(router)
 	go n.Run(":8081")
 	signalHandler(quit)

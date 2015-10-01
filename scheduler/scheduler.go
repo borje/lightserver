@@ -190,7 +190,7 @@ func addEventForDay(eq *ScheduledEvents, configItems []ScheduleConfigItem, day t
 	}
 }
 
-func doTellstickAction(device int, action Action) {
+func DoTellstickAction(device int, action Action) {
 	var tellstickCmd string
 	if action == TurnOn {
 		tellstickCmd = "--on"
@@ -217,7 +217,7 @@ func (this *Scheduler) initialState() time.Time {
 			for i := range *this.eventQueue {
 				event := (*this.eventQueue)[this.eventQueue.Len()-1-i] // Iterate the heap backwards
 				if event.Device == device && event.Time.Before(now) {
-					doTellstickAction(device, event.Action)
+					DoTellstickAction(device, event.Action)
 					actionFound = true
 					break
 				}
@@ -255,10 +255,10 @@ func (this *Scheduler) Schedule(quit chan bool) {
 					quit <- true
 					return
 				case <-timer.C:
-					doTellstickAction(event.Device, event.Action)
+					DoTellstickAction(event.Device, event.Action)
 				}
 			} else {
-				doTellstickAction(event.Device, event.Action)
+				DoTellstickAction(event.Device, event.Action)
 			}
 			heap.Pop(this.eventQueue)
 		}

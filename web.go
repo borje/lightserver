@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -66,4 +68,18 @@ func scheduleHandler(w http.ResponseWriter, req *http.Request) {
 
 	sort.Sort(s.EventQueue())
 	rend.JSON(w, http.StatusOK, s.EventQueue())
+}
+
+func controlHandler(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	devstr := vars["device"]
+	action := vars["action"]
+	if device, err := strconv.Atoi(devstr); err == nil {
+		if strings.ToLower(action) == "on" {
+			go scheduler.DoTellstickAction(device, scheduler.TurnOn)
+		} else {
+			go scheduler.DoTellstickAction(device, scheduler.TurnOff)
+		}
+	}
+
 }
