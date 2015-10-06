@@ -89,7 +89,7 @@ func main() {
 	router.HandleFunc("/info", logHandlerFunc(infoHandler))
 	router.HandleFunc("/config", logHandlerFunc(fileReturnHandler(*configFile)))
 	router.HandleFunc("/log", logHandlerFunc(fileReturnHandler(LOG_FILE)))
-	router.HandleFunc("/schedule/{year:[0-9]+}/{month:[0-9]+}/{day:[0-9]+}", logHandlerFunc(scheduleHandler))
+	router.HandleFunc("/schedule", logHandlerFunc(scheduleHandler))
 	router.PathPrefix("/").Handler(logHandler(http.FileServer(http.Dir("static"))))
 
 	controlRouter := mux.NewRouter()

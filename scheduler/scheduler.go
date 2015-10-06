@@ -56,6 +56,12 @@ type ScheduleConfigItem struct {
 
 type ScheduledEvents []ScheduledEvent
 
+type OnPeriod struct {
+	Device int       `json:"-"`
+	Start  time.Time `json:"start"`
+	End    time.Time `json:"end"`
+}
+
 func NewSchedulerFromReader(r io.Reader) *Scheduler {
 	scheduler := &Scheduler{
 		configFile: "",
@@ -90,10 +96,16 @@ func (s *Scheduler) EventQueue() ScheduledEvents {
 
 // Helper functions
 func timeFromString(theDay time.Time, clock string) time.Time {
-	timeStr := strings.Split(clock, ":")
-	hour, _ := strconv.Atoi(timeStr[0])
-	minute, _ := strconv.Atoi(timeStr[1])
-	return time.Date(theDay.Year(), theDay.Month(), theDay.Day(), hour, minute, 0, 0, theDay.Location())
+	if clock == "SUNSET" {
+		return astrotime.CalcSunset(theDay, LATITUDE, LONGITUDE)
+	} else if clock == "SUNRISE" {
+		return astrotime.CalcSunrise(theDay, LATITUDE, LONGITUDE)
+	} else {
+		timeStr := strings.Split(clock, ":")
+		hour, _ := strconv.Atoi(timeStr[0])
+		minute, _ := strconv.Atoi(timeStr[1])
+		return time.Date(theDay.Year(), theDay.Month(), theDay.Day(), hour, minute, 0, 0, theDay.Location())
+	}
 }
 
 /* Functions for sorting ScheduledEvents */
@@ -265,4 +277,23 @@ func (this *Scheduler) Schedule(quit chan bool) {
 		currentDay = currentDay.AddDate(0, 0, 1)
 		addEventForDay(this.eventQueue, this.configItems, currentDay)
 	}
+}
+
+func (this *Scheduler) Periods(start time.Time) (periods []OnPeriod) {
+	for _, v := range this.configItems { // unused return value ?
+		device := v.Device
+		weekdays := strings.Split(v.Weekdays, ",")
+		for _, dayInWeekString := range weekdays {
+			dayInWeek, _ := strconv.Atoi(dayInWeekString)
+			if start.Weekday() == time.Weekday(dayInWeek) {
+				startTime := timeFromString(start, v.TimeFrom)
+				endTime := timeFromString(start, v.TimeTo)
+				//log.Println(device, start.Weekday(), startTime, endTime)
+				if endTime.After(startTime) {
+					periods = append(periods, OnPeriod{device, startTime, endTime})
+				}
+			}
+		}
+	}
+	return periods
 }

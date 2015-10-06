@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"lightserver/scheduler"
 	"log"
@@ -58,16 +57,28 @@ func scheduleHandler(w http.ResponseWriter, req *http.Request) {
 	s := scheduler.NewSchedulerFromReader(f)
 	f.Close()
 
-	vars := mux.Vars(req)
-	date := fmt.Sprintf("%04s-%02s-%02s", vars["year"], vars["month"], vars["day"])
-	t, err := time.Parse("2006-01-02", date)
+	start := req.URL.Query().Get("start")
+
+	startDate, err := time.ParseInLocation("2006-01-02", start, time.Local)
 	if err != nil {
 		log.Println(err)
+		http.Error(w, "unknown start date", http.StatusInternalServerError)
+		return
 	}
-	s.AddEventsForDay(t)
 
-	sort.Sort(s.EventQueue())
-	rend.JSON(w, http.StatusOK, s.EventQueue())
+	end := req.URL.Query().Get("end")
+	endDate, err := time.ParseInLocation("2006-01-02", end, time.Local)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "unknown end date", http.StatusInternalServerError)
+		return
+	}
+
+	var periods []scheduler.OnPeriod
+	for d := startDate; !d.After(endDate); d = d.Add(time.Hour * 24) {
+		periods = append(periods, s.Periods(d)...)
+	}
+	rend.JSON(w, http.StatusOK, periods)
 }
 
 func controlHandler(w http.ResponseWriter, req *http.Request) {

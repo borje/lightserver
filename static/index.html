@@ -1,8 +1,11 @@
 <html>
     <head>
         <title>The lightserver</title>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-        <script src="js/main.js"></script>
+        <link rel='stylesheet' type='text/css' href="//cdnjs.cloudflare.com/ajax/libs/fullcalendar/2.4.0/fullcalendar.min.css"/>
+        <script type='text/javascript' src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+        <script type='text/javascript' src='//cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment.min.js'></script>
+        <script type='text/javascript' src="//cdnjs.cloudflare.com/ajax/libs/fullcalendar/2.4.0/fullcalendar.min.js"></script>
+        <script type='text/javascript' src="js/main.js"></script>
     </head>
     <body>
 
@@ -21,8 +24,8 @@
             <li><a href="config">Configfile</a> </li>
         </ul>
 		
-		<table id="queue"><tr><th>Time</th><th>Device</th><th>Action</th></tr></table>
-
+        <table id="queue"><tr><th>Time</th><th>Device</th><th>Action</th></tr></table>
+        <div id='calendar'></div>
     </body>
 </html>
 
