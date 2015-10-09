@@ -2,10 +2,15 @@ package main
 
 import (
 	"lightserver/scheduler"
+	"log"
+	"net/http"
+	"net/http/httptest"
 	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/unrolled/render"
 )
 
 func TestShouldBeSortedWhenSameObjects(t *testing.T) {
@@ -22,16 +27,17 @@ func TestShouldBeSortedWhenSameObjects(t *testing.T) {
 }
 
 func TestReturnCopyOfEventQueue(t *testing.T) {
+	log.SetFlags(log.Lshortfile)
 	c := `[
 	{
 		"device":2,
-		"weekdays":"1,2,3,4,5,6,0",
+		"weekdays":[1,2,3,4,5,6,0],
 		"timeFrom":"06:15",
 		"timeTo":"21:00"
 	},
 	{
 		"device":2,
-		"weekdays":"1,2,3,4,5,6,0",
+		"weekdays":[1,2,3,4,5,6,0],
 		"timeFrom":"06:15",
 		"timeTo":"20:00"
 	}
@@ -50,5 +56,20 @@ func TestReturnCopyOfEventQueue(t *testing.T) {
 	}
 	if !sort.IsSorted(queue2) {
 		t.Errorf("Should be sorted")
+	}
+}
+
+func BenchmarkTesting(b *testing.B) {
+	req, err := http.NewRequest("GET", "/schedule?start=2015-09-05&end=2015-10-12&_=1444335823457", nil)
+	rend = render.New(render.Options{IndentJSON: true})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+
+	for i := 0; i < b.N; i++ {
+		scheduleHandler(w, req)
+		//fmt.Printf("%d - %s", w.Code, w.Body.String())
 	}
 }

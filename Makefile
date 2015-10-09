@@ -11,3 +11,5 @@ publish:
 	ssh pi "sudo service lightserverd start" || exit 1
 
 
+test:
+	go test ./...
