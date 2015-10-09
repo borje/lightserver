@@ -49,7 +49,7 @@ type ScheduledEvent struct {
 
 type ScheduleConfigItem struct {
 	Device   int
-	Weekdays string
+	Weekdays []int
 	TimeFrom string
 	TimeTo   string
 }
@@ -135,9 +135,7 @@ func eventsForDay(now time.Time, schedule []ScheduleConfigItem) (events Schedule
 	currentWeekDay := now.Weekday()
 	for _, v := range schedule { // unused return value ?
 		device := v.Device
-		weekdays := strings.Split(v.Weekdays, ",")
-		for _, dayInWeekString := range weekdays {
-			dayInWeek, _ := strconv.Atoi(dayInWeekString)
+		for _, dayInWeek := range v.Weekdays {
 			if currentWeekDay == time.Weekday(dayInWeek) {
 				// TURN ON
 				var onEvent ScheduledEvent
@@ -282,13 +280,10 @@ func (this *Scheduler) Schedule(quit chan bool) {
 func (this *Scheduler) Periods(start time.Time) (periods []OnPeriod) {
 	for _, v := range this.configItems { // unused return value ?
 		device := v.Device
-		weekdays := strings.Split(v.Weekdays, ",")
-		for _, dayInWeekString := range weekdays {
-			dayInWeek, _ := strconv.Atoi(dayInWeekString)
+		for _, dayInWeek := range v.Weekdays {
 			if start.Weekday() == time.Weekday(dayInWeek) {
 				startTime := timeFromString(start, v.TimeFrom)
 				endTime := timeFromString(start, v.TimeTo)
-				//log.Println(device, start.Weekday(), startTime, endTime)
 				if endTime.After(startTime) {
 					periods = append(periods, OnPeriod{device, startTime, endTime})
 				}
